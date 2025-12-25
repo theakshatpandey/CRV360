@@ -1,0 +1,17 @@
+# --- Global ---
+.DS_Store
+.env
+.vscode/
+
+# --- ProductBackend (Python) ---
+ProductBackend/venv/
+ProductBackend/env/
+ProductBackend/.venv/
+ProductBackend/__pycache__/
+ProductBackend/*.pyc
+
+# --- ProductFrontend (Node) ---
+ProductFrontend/node_modules/
+ProductFrontend/build/
+ProductFrontend/dist/
+ProductFrontend/*.log

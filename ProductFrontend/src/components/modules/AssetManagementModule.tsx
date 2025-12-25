@@ -1,0 +1,867 @@
+import { useState, useEffect, createContext, useContext } from 'react';
+import { toast } from 'sonner';
+import { Loader2, X } from 'lucide-react';
+import {
+  Shield,
+  Search,
+  Plus,
+  Eye,
+  AlertCircle,
+  CheckCircle,
+  Server,
+  Cloud,
+  Laptop,
+  ArrowUpRight,
+  ArrowDownRight,
+  Target,
+  AlertTriangle,
+  Building,
+  Upload,
+  FileWarning
+} from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
+
+// --- MOCK AUTH CONTEXT ---
+const useAuth = () => ({ user: { name: 'Demo User', role: 'Admin' } });
+
+// --- INTERNAL UI COMPONENTS ---
+
+const Card = ({ className, children }: any) => <div className={`rounded-lg border bg-card text-card-foreground shadow-sm ${className || ''}`}>{children}</div>;
+const CardHeader = ({ className, children }: any) => <div className={`flex flex-col space-y-1.5 p-6 ${className || ''}`}>{children}</div>;
+const CardTitle = ({ className, children }: any) => <h3 className={`text-2xl font-semibold leading-none tracking-tight ${className || ''}`}>{children}</h3>;
+const CardDescription = ({ className, children }: any) => <p className={`text-sm text-muted-foreground ${className || ''}`}>{children}</p>;
+const CardContent = ({ className, children }: any) => <div className={`p-6 pt-0 ${className || ''}`}>{children}</div>;
+
+const Badge = ({ variant = "default", className, children }: any) => {
+  const variants: any = {
+    default: "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+    secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+    destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
+    outline: "text-foreground",
+  };
+  return <div className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${variants[variant] || variants.default} ${className || ''}`}>{children}</div>;
+};
+
+const Button = ({ variant = "default", size = "default", className, children, ...props }: any) => {
+  const variants: any = {
+    default: "bg-primary text-primary-foreground hover:bg-primary/90",
+    destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+    outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+    secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+    ghost: "hover:bg-accent hover:text-accent-foreground",
+    link: "text-primary underline-offset-4 hover:underline",
+  };
+  const sizes: any = {
+    default: "h-10 px-4 py-2",
+    sm: "h-9 rounded-md px-3",
+    lg: "h-11 rounded-md px-8",
+    icon: "h-10 w-10",
+  };
+  return <button className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${variants[variant]} ${sizes[size]} ${className || ''}`} {...props}>{children}</button>;
+};
+
+const Input = ({ className, ...props }: any) => <input className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className || ''}`} {...props} />;
+
+const Label = ({ className, children, htmlFor }: any) => <label htmlFor={htmlFor} className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${className || ''}`}>{children}</label>;
+
+const Alert = ({ className, children }: any) => <div className={`relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground ${className || ''}`} role="alert">{children}</div>;
+const AlertDescription = ({ className, children }: any) => <div className={`text-sm [&_p]:leading-relaxed ${className || ''}`}>{children}</div>;
+
+const Table = ({ className, children }: any) => <div className="relative w-full overflow-auto"><table className={`w-full caption-bottom text-sm ${className || ''}`}>{children}</table></div>;
+const TableHeader = ({ className, children }: any) => <thead className={`[&_tr]:border-b ${className || ''}`}>{children}</thead>;
+const TableBody = ({ className, children }: any) => <tbody className={`[&_tr:last-child]:border-0 ${className || ''}`}>{children}</tbody>;
+const TableRow = ({ className, children }: any) => <tr className={`border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted ${className || ''}`}>{children}</tr>;
+const TableHead = ({ className, children }: any) => <th className={`h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 ${className || ''}`}>{children}</th>;
+const TableCell = ({ className, children }: any) => <td className={`p-4 align-middle [&:has([role=checkbox])]:pr-0 ${className || ''}`}>{children}</td>;
+
+const Progress = ({ value, className }: any) => <div className={`relative h-4 w-full overflow-hidden rounded-full bg-secondary ${className || ''}`}><div className="h-full w-full flex-1 bg-primary transition-all" style={{ transform: `translateX(-${100 - (value || 0)}%)` }} /></div>;
+
+// Custom Native Select to replace external Select component
+const NativeSelect = ({ value, onChange, options, placeholder, className }: any) => (
+  <div className={`relative ${className}`}>
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+    >
+      <option value="" disabled>{placeholder}</option>
+      {options.map((opt: any) => (
+        <option key={opt.value} value={opt.value}>{opt.label}</option>
+      ))}
+    </select>
+    <div className="absolute right-3 top-3 pointer-events-none">
+      <ArrowDownRight className="h-4 w-4 text-muted-foreground opacity-50" />
+    </div>
+  </div>
+);
+
+// Simple Modal to replace Dialog
+const SimpleModal = ({ isOpen, onClose, title, description, children }: any) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex flex-col space-y-1.5 p-6 pb-2">
+          <div className="flex justify-between items-start">
+            <h3 className="text-lg font-semibold leading-none tracking-tight">{title}</h3>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+        <div className="p-6 pt-2">{children}</div>
+      </div>
+    </div>
+  );
+};
+
+// --- TYPES ---
+
+interface AssetManagementModuleProps {
+  onModuleChange?: (module: string) => void;
+}
+
+interface AssetSummary {
+  total_assets: number;
+  critical_actions: number;
+  avg_risk_score: number;
+  compliance_rate: number;
+}
+
+interface AssetCategory {
+  category: string;
+  total: number;
+  compliant: number;
+  percentage: number;
+}
+
+interface TopRiskAsset {
+  asset_name: string;
+  risk_score: number;
+  business_impact: string;
+  critical_issues: number;
+  business_unit: string;
+  recommended_action: string;
+}
+
+interface Asset {
+  id: string;
+  name: string;
+  type: string;
+  category: string;
+  business_unit: string;
+  exposure_level: string;
+  risk_score: number;
+  compliance_status: string;
+  critical_issues: number;
+  tasks: number;
+  ip_address?: string;
+  owner?: string;
+  status?: string;
+}
+
+// --- MAIN MODULE ---
+
+export function AssetManagementModule({ onModuleChange }: AssetManagementModuleProps = {}) {
+  const { user } = useAuth();
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [viewMode, setViewMode] = useState<'executive' | 'analyst'>('executive');
+  const [isAddAssetDialogOpen, setIsAddAssetDialogOpen] = useState(false);
+
+  // API data states
+  const [summary, setSummary] = useState<AssetSummary | null>(null);
+  const [categories, setCategories] = useState<AssetCategory[]>([]);
+  const [topRisks, setTopRisks] = useState<TopRiskAsset[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // Form state for Add Asset
+  const [newAsset, setNewAsset] = useState({
+    hostname: '',
+    ip_address: '',
+    asset_type: 'Server',
+    criticality: 'Medium',
+    business_unit: '',
+    owner: ''
+  });
+
+  // Fetch all data
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const fetchWithFallback = async (url: string) => {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error('Not OK');
+          return await res.json();
+        } catch (e) {
+          console.warn(`Fetch failed for ${url}, using fallback.`);
+          return null;
+        }
+      };
+
+      const [summaryRes, categoriesRes, risksRes, inventoryRes] = await Promise.all([
+        fetchWithFallback('http://127.0.0.1:5000/api/assets/summary'),
+        fetchWithFallback('http://127.0.0.1:5000/api/assets/distribution'),
+        fetchWithFallback('http://127.0.0.1:5000/api/assets/top-risk'),
+        fetchWithFallback('http://127.0.0.1:5000/api/assets')
+      ]);
+
+      if (summaryRes) setSummary(summaryRes);
+      if (categoriesRes) setCategories(categoriesRes);
+      if (risksRes) setTopRisks(risksRes);
+      if (inventoryRes && inventoryRes.assets) setAssets(inventoryRes.assets);
+
+    } catch (err) {
+      console.error('Failed to load asset data', err);
+      setError('Failed to load asset data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Fallback data
+  const fallbackSummary = {
+    total_assets: 1247,
+    critical_actions: 12,
+    avg_risk_score: 6.8,
+    compliance_rate: 87.3
+  };
+
+  const fallbackCategories = [
+    { category: "Servers", total: 189, compliant: 137, percentage: 72.5 },
+    { category: "Endpoints", total: 523, compliant: 477, percentage: 91.2 },
+    { category: "Cloud Resources", total: 312, compliant: 299, percentage: 95.8 },
+    { category: "Network Devices", total: 89, compliant: 79, percentage: 88.3 },
+    { category: "IoT Devices", total: 134, compliant: 92, percentage: 68.7 }
+  ];
+
+  const fallbackTopRisks = [
+    {
+      asset_name: "prod-db-primary",
+      risk_score: 9.2,
+      business_impact: "Customer data exposure risk. Revenue-critical database.",
+      critical_issues: 3,
+      business_unit: "Finance",
+      recommended_action: "Apply emergency patch immediately"
+    },
+    {
+      asset_name: "web-app-gateway",
+      risk_score: 8.5,
+      business_impact: "Customer portal access point. Brand reputation risk.",
+      critical_issues: 8,
+      business_unit: "IT Operations",
+      recommended_action: "Isolate and patch within 48 hours"
+    },
+    {
+      asset_name: "finance-workstation-12",
+      risk_score: 7.8,
+      business_impact: "Finance department workstation with access to payment systems.",
+      critical_issues: 5,
+      business_unit: "Finance",
+      recommended_action: "Enable EDR and revoke admin rights"
+    }
+  ];
+
+  const fallbackAssets = [
+    {
+      id: "fallback-1",
+      name: "prod-db-primary",
+      type: "Server",
+      category: "Servers",
+      business_unit: "Finance",
+      exposure_level: "Critical",
+      risk_score: 9.2,
+      compliance_status: "Non-Compliant",
+      critical_issues: 3,
+      tasks: 2,
+      ip_address: "192.168.1.10",
+      owner: "Admin",
+      status: "Active"
+    },
+  ];
+
+  // Use real or fallback
+  const currentSummary = summary || fallbackSummary;
+  const currentCategories = categories.length > 0 ? categories : fallbackCategories;
+  const currentTopRisks = topRisks.length > 0 ? topRisks : fallbackTopRisks;
+  const currentAssets = assets.length > 0 ? assets : fallbackAssets;
+
+  const getExposureColor = (level: string) => {
+    switch (String(level)) {
+      case 'Critical': return 'bg-red-600 text-white';
+      case 'High': return 'bg-orange-600 text-white';
+      case 'Medium': return 'bg-yellow-600 text-white';
+      case 'Low': return 'bg-green-600 text-white';
+      default: return 'bg-gray-600 text-white';
+    }
+  };
+
+  const getComplianceColor = (status: string) => {
+    switch (String(status)) {
+      case 'Compliant': return 'bg-green-100 text-green-800 border-green-300';
+      case 'Non-Compliant': return 'bg-red-100 text-red-800 border-red-300';
+      case 'Needs Review': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
+  const getRiskColor = (score: number) => {
+    if (score >= 9.0) return 'text-red-600';
+    if (score >= 7.0) return 'text-orange-600';
+    if (score >= 4.0) return 'text-yellow-600';
+    return 'text-green-600';
+  };
+
+  const handleAddAsset = async () => {
+    if (!newAsset.hostname || !newAsset.ip_address) {
+      toast.error('Please fill required fields');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/assets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newAsset),
+      });
+
+      if (response.ok) {
+        toast.success(`Asset "${newAsset.hostname}" added successfully!`);
+        setIsAddAssetDialogOpen(false);
+        setNewAsset({
+          hostname: '',
+          ip_address: '',
+          asset_type: 'Server',
+          criticality: 'Medium',
+          business_unit: '',
+          owner: ''
+        });
+        // Refresh list
+        fetchData();
+      } else {
+        const errData = await response.json();
+        toast.error(`Error adding asset: ${errData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error("Error creating asset:", error);
+      toast.error("Failed to connect to backend");
+    }
+  };
+
+  const handleImportCSV = () => {
+    toast.success('CSV import started. Processing assets...');
+  };
+
+  const filteredAssets = currentAssets.filter(asset => {
+    const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (asset.business_unit && asset.business_unit.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesType = typeFilter === 'all' || asset.type === typeFilter;
+    return matchesSearch && matchesType;
+  });
+
+  return (
+    <div className="space-y-6">
+      {/* CRITICAL ALERT BANNER */}
+      {currentSummary.critical_actions > 0 && (
+        <Alert className="border-2 border-red-500 bg-red-50">
+          <AlertCircle className="h-5 w-5 text-red-600" />
+          <AlertDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="font-bold text-red-900 text-lg">
+                  {currentSummary.critical_actions} critical asset{currentSummary.critical_actions > 1 ? 's' : ''} require{currentSummary.critical_actions === 1 ? 's' : ''} immediate attention.
+                </span>
+                <p className="text-sm text-red-800 mt-1">
+                  High-risk assets exposed to active exploitation
+                </p>
+              </div>
+              <div className="flex space-x-2">
+                <Button variant="destructive" size="sm">
+                  View Incident
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => onModuleChange?.('vulnerabilities')}>
+                  Review Vulnerabilities
+                </Button>
+                <Button variant="outline" size="sm">
+                  Approve Remediation
+                </Button>
+              </div>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* ASSET POSTURE SUMMARY */}
+      <div className="grid gap-4 md:grid-cols-4">
+        {/* Total Assets */}
+        <Card className="border-2 border-blue-200 bg-blue-50/30">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Assets</CardTitle>
+            <Shield className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            {loading ? <Loader2 className="h-8 w-8 animate-spin mx-auto" /> : (
+              <>
+                <div className="text-4xl font-bold text-blue-600">{currentSummary.total_assets}</div>
+                <div className="flex items-center space-x-1 text-xs mt-2">
+                  <ArrowUpRight className="h-4 w-4 text-green-600" />
+                  <span className="text-green-600 font-semibold">+23</span>
+                  <span className="text-muted-foreground">this week</span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Critical Actions */}
+        <Card className="border-2 border-red-200 bg-red-50/30">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Critical Actions</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            {loading ? <Loader2 className="h-8 w-8 animate-spin mx-auto" /> : (
+              <>
+                <div className="text-4xl font-bold text-red-600">{currentSummary.critical_actions}</div>
+                <div className="text-xs text-muted-foreground mt-2">requires attention</div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Average Risk Score */}
+        <Card className="border-2 border-orange-200 bg-orange-50/30">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Risk Score</CardTitle>
+            <Target className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            {loading ? <Loader2 className="h-8 w-8 animate-spin mx-auto" /> : (
+              <>
+                <div className="text-4xl font-bold text-orange-600">{currentSummary.avg_risk_score.toFixed(1)}</div>
+                <div className="flex items-center space-x-1 text-xs mt-2">
+                  <ArrowDownRight className="h-4 w-4 text-green-600" />
+                  <span className="text-green-600 font-semibold">0.4</span>
+                  <span className="text-muted-foreground">improvement</span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Compliance Rate */}
+        <Card className="border-2 border-green-200 bg-green-50/30">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Compliance Rate</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            {loading ? <Loader2 className="h-8 w-8 animate-spin mx-auto" /> : (
+              <>
+                <div className="text-4xl font-bold text-green-600">{currentSummary.compliance_rate.toFixed(1)}%</div>
+                <div className="text-xs text-muted-foreground mt-2">8 requires review</div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* DISTRIBUTION & COMPLIANCE */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Asset Distribution by Type */}
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle>Asset Distribution by Type</CardTitle>
+            <CardDescription>Breakdown of organizational assets with risk indicators</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="h-80 flex items-center justify-center">
+                <Loader2 className="h-12 w-12 animate-spin" />
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={currentCategories}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={70}
+                      outerRadius={110}
+                      dataKey="total"
+                      label={(entry) => `${entry.category}: ${entry.total}`}
+                    >
+                      {currentCategories.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={index === 0 ? '#3b82f6' : index === 1 ? '#8b5cf6' : index === 2 ? '#ef4444' : index === 3 ? '#f97316' : '#22c55e'} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="mt-6 space-y-2">
+                  {currentCategories.map((entry, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 border rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: index === 0 ? '#3b82f6' : index === 1 ? '#8b5cf6' : index === 2 ? '#ef4444' : index === 3 ? '#f97316' : '#22c55e' }} />
+                        <span className="font-medium">{entry.category}</span>
+                      </div>
+                      <span className="font-bold text-gray-900">{entry.total}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Compliance by Asset Category */}
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle>Compliance by Asset Category</CardTitle>
+            <CardDescription>Compliance percentage per asset group (85% threshold)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => <div key={i} className="h-24 bg-gray-100 rounded-lg animate-pulse" />)}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {currentCategories.map((item) => (
+                  <div key={item.category} className={`p-3 border-2 rounded-lg ${item.percentage < 85 ? 'bg-red-50 border-red-300' : 'bg-green-50 border-green-300'}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-semibold">{item.category}</span>
+                      <div className="flex items-center space-x-2">
+                        <span className={`text-2xl font-bold ${item.percentage < 85 ? 'text-red-600' : 'text-green-600'}`}>
+                          {item.percentage.toFixed(1)}%
+                        </span>
+                        {item.percentage < 85 && <AlertCircle className="h-5 w-5 text-red-600" />}
+                      </div>
+                    </div>
+                    <Progress value={item.percentage} className={`h-3 ${item.percentage < 85 ? 'bg-red-200' : 'bg-green-200'}`} />
+                    <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                      <span>{item.compliant} of {item.total} compliant</span>
+                      {item.percentage < 85 && <span className="text-red-700 font-semibold">Below threshold</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* TOP AT-RISK ASSETS */}
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <FileWarning className="h-5 w-5 text-red-600" />
+            <span>Top At-Risk Assets</span>
+          </CardTitle>
+          <CardDescription>Assets requiring immediate CISO attention</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="grid gap-4 lg:grid-cols-3">
+              {[...Array(3)].map((_, i) => <div key={i} className="h-80 bg-gray-100 rounded-lg animate-pulse" />)}
+            </div>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-3">
+              {currentTopRisks.map((asset, idx) => (
+                <div key={idx} className="border-2 border-red-300 rounded-lg p-5 bg-red-50/30">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h4 className="font-bold text-lg">{asset.asset_name}</h4>
+                      <p className="text-xs text-muted-foreground">Server</p>
+                    </div>
+                    <div className="text-right">
+                      <div className={`text-3xl font-bold ${getRiskColor(asset.risk_score)}`}>
+                        {asset.risk_score}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Risk Score</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 mb-4">
+                    <div className="bg-white border rounded-lg p-3">
+                      <div className="text-xs font-semibold text-gray-700 mb-1">Business Impact</div>
+                      <p className="text-sm text-gray-900">{asset.business_impact}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    <div className="bg-white border rounded-lg p-2 text-center">
+                      <div className="text-xl font-bold text-purple-600">{asset.critical_issues}</div>
+                      <div className="text-xs text-muted-foreground">Critical Issues</div>
+                    </div>
+                    <div className="bg-white border rounded-lg p-2 text-center">
+                      <Badge variant="outline" className="text-xs">
+                        <Building className="h-3 w-3 mr-1" />
+                        {asset.business_unit}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-3">
+                    <div className="text-xs font-semibold text-blue-900 mb-1">Recommended Action</div>
+                    <p className="text-sm text-blue-800 font-medium">{asset.recommended_action}</p>
+                  </div>
+
+                  <Button className="w-full" variant="destructive">
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Take Action
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ASSET INVENTORY TABLE */}
+      <Card className="shadow-lg">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Asset Inventory</CardTitle>
+              <CardDescription>
+                {viewMode === 'executive' ? 'Executive overview' : 'Detailed analyst view'}
+              </CardDescription>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="inline-flex rounded-lg border-2 p-1">
+                <button
+                  onClick={() => setViewMode('executive')}
+                  className={`px-4 py-2 text-sm rounded font-medium ${viewMode === 'executive' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+                >
+                  Executive View
+                </button>
+                <button
+                  onClick={() => setViewMode('analyst')}
+                  className={`px-4 py-2 text-sm rounded font-medium ${viewMode === 'analyst' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+                >
+                  Analyst View
+                </button>
+              </div>
+
+              <Button onClick={() => setIsAddAssetDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Asset
+              </Button>
+
+              <SimpleModal
+                isOpen={isAddAssetDialogOpen}
+                onClose={() => setIsAddAssetDialogOpen(false)}
+                title="Add New Asset"
+                description="Register a new asset in the inventory"
+              >
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="hostname">Hostname *</Label>
+                      <Input id="hostname" placeholder="e.g., web-server-01" value={newAsset.hostname} onChange={(e: any) => setNewAsset({ ...newAsset, hostname: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="ip_address">IP Address *</Label>
+                      <Input id="ip_address" placeholder="e.g., 192.168.1.100" value={newAsset.ip_address} onChange={(e: any) => setNewAsset({ ...newAsset, ip_address: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="asset_type">Asset Type *</Label>
+                      <NativeSelect
+                        value={newAsset.asset_type}
+                        onChange={(value: any) => setNewAsset({ ...newAsset, asset_type: value })}
+                        placeholder="Select Type"
+                        options={[
+                          { value: 'Server', label: 'Server' },
+                          { value: 'Endpoint', label: 'Endpoint' },
+                          { value: 'Cloud Resource', label: 'Cloud Resource' },
+                          { value: 'Network Device', label: 'Network Device' },
+                          { value: 'IoT Device', label: 'IoT Device' },
+                        ]}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="criticality">Criticality *</Label>
+                      <NativeSelect
+                        value={newAsset.criticality}
+                        onChange={(value: any) => setNewAsset({ ...newAsset, criticality: value })}
+                        placeholder="Select Criticality"
+                        options={[
+                          { value: 'Critical', label: 'Critical' },
+                          { value: 'High', label: 'High' },
+                          { value: 'Medium', label: 'Medium' },
+                          { value: 'Low', label: 'Low' },
+                        ]}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="business_unit">Business Unit *</Label>
+                      <Input id="business_unit" placeholder="e.g., Finance" value={newAsset.business_unit} onChange={(e: any) => setNewAsset({ ...newAsset, business_unit: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="owner">Owner *</Label>
+                      <Input id="owner" placeholder="e.g., John Smith" value={newAsset.owner} onChange={(e: any) => setNewAsset({ ...newAsset, owner: e.target.value })} />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline" onClick={() => setIsAddAssetDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleAddAsset}>Add Asset</Button>
+                </div>
+              </SimpleModal>
+
+              <Button variant="outline" onClick={handleImportCSV}>
+                <Upload className="h-4 w-4 mr-2" />
+                Import CSV
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-4 mt-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search assets or business units..." className="pl-8" value={searchTerm} onChange={(e: any) => setSearchTerm(e.target.value)} />
+            </div>
+
+            <div className="w-48">
+              <NativeSelect
+                value={typeFilter}
+                onChange={setTypeFilter}
+                placeholder="All Types"
+                options={[
+                  { value: 'all', label: 'All Types' },
+                  { value: 'Server', label: 'Servers' },
+                  { value: 'Endpoint', label: 'Endpoints' },
+                  { value: 'Cloud Resource', label: 'Cloud Resources' },
+                  { value: 'Network Device', label: 'Network Devices' },
+                  { value: 'IoT Device', label: 'IoT Devices' },
+                ]}
+              />
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Asset Name</TableHead>
+                  <TableHead>Business Unit</TableHead>
+                  <TableHead>Exposure Level</TableHead>
+                  <TableHead>Risk Score</TableHead>
+                  <TableHead>Compliance</TableHead>
+                  <TableHead>Critical Issues</TableHead>
+                  <TableHead>Tasks</TableHead>
+                  {viewMode === 'analyst' && (
+                    <>
+                      <TableHead>IP Address</TableHead>
+                      <TableHead>OS</TableHead>
+                      <TableHead>Owner</TableHead>
+                      <TableHead>Last Seen</TableHead>
+                    </>
+                  )}
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAssets.map((asset) => (
+                  <TableRow key={asset.id}>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        {asset.type === 'Server' && <Server className="h-4 w-4 text-blue-600" />}
+                        {asset.type === 'Endpoint' && <Laptop className="h-4 w-4 text-purple-600" />}
+                        {asset.type === 'Cloud Resource' && <Cloud className="h-4 w-4 text-indigo-600" />}
+                        <div>
+                          <div className="font-semibold">{asset.name}</div>
+                          <div className="text-xs text-muted-foreground">{asset.type}</div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        <Building className="h-3 w-3 mr-1" />
+                        {asset.business_unit}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={`${getExposureColor(asset.exposure_level)} font-bold`}>
+                        {asset.exposure_level}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`text-xl font-bold ${getRiskColor(asset.risk_score)}`}>
+                        {asset.risk_score}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getComplianceColor(asset.compliance_status)}>
+                        {asset.compliance_status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        {asset.critical_issues > 0 ? (
+                          <>
+                            <AlertCircle className="h-4 w-4 text-red-600" />
+                            <span className="font-bold text-red-600">{asset.critical_issues}</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <span className="font-bold text-green-600">0</span>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {asset.tasks > 0 ? (
+                        <Badge variant="secondary">{asset.tasks}</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    {viewMode === 'analyst' && (
+                      <>
+                        <TableCell className="font-mono text-xs">{asset.ip_address || 'N/A'}</TableCell>
+                        <TableCell className="text-xs">N/A</TableCell>
+                        <TableCell className="text-xs">{asset.owner || 'Unassigned'}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{asset.status || 'Active'}</TableCell>
+                      </>
+                    )}
+                    <TableCell>
+                      <Button variant="ghost" size="sm">
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="mt-4 text-sm text-muted-foreground">
+            Showing {filteredAssets.length} of {currentAssets.length} assets
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
