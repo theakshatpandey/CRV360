@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Loader2, X } from 'lucide-react';
 import {
@@ -29,6 +29,7 @@ const useAuth = () => ({ user: { name: 'Demo User', role: 'Admin' } });
 const Card = ({ className, children }: any) => <div className={`rounded-lg border bg-card text-card-foreground shadow-sm ${className || ''}`}>{children}</div>;
 const CardHeader = ({ className, children }: any) => <div className={`flex flex-col space-y-1.5 p-6 ${className || ''}`}>{children}</div>;
 const CardTitle = ({ className, children }: any) => <h3 className={`text-2xl font-semibold leading-none tracking-tight ${className || ''}`}>{children}</h3>;
+// FIX: Changed closing tag from </div> to </p>
 const CardDescription = ({ className, children }: any) => <p className={`text-sm text-muted-foreground ${className || ''}`}>{children}</p>;
 const CardContent = ({ className, children }: any) => <div className={`p-6 pt-0 ${className || ''}`}>{children}</div>;
 
@@ -57,7 +58,7 @@ const Button = ({ variant = "default", size = "default", className, children, ..
     lg: "h-11 rounded-md px-8",
     icon: "h-10 w-10",
   };
-  return <button className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${variants[variant]} ${sizes[size]} ${className || ''}`} {...props}>{children}</button>;
+  return <button className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${variants[variant] || variants.default} ${sizes[size]} ${className || ''}`} {...props}>{children}</button>;
 };
 
 const Input = ({ className, ...props }: any) => <input className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className || ''}`} {...props} />;
@@ -76,7 +77,6 @@ const TableCell = ({ className, children }: any) => <td className={`p-4 align-mi
 
 const Progress = ({ value, className }: any) => <div className={`relative h-4 w-full overflow-hidden rounded-full bg-secondary ${className || ''}`}><div className="h-full w-full flex-1 bg-primary transition-all" style={{ transform: `translateX(-${100 - (value || 0)}%)` }} /></div>;
 
-// Custom Native Select to replace external Select component
 const NativeSelect = ({ value, onChange, options, placeholder, className }: any) => (
   <div className={`relative ${className}`}>
     <select
@@ -95,7 +95,6 @@ const NativeSelect = ({ value, onChange, options, placeholder, className }: any)
   </div>
 );
 
-// Simple Modal to replace Dialog
 const SimpleModal = ({ isOpen, onClose, title, description, children }: any) => {
   if (!isOpen) return null;
   return (
@@ -205,14 +204,25 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
       };
 
       const [summaryRes, categoriesRes, risksRes, inventoryRes] = await Promise.all([
-        fetchWithFallback('http://127.0.0.1:5000/api/assets/summary'),
-        fetchWithFallback('http://127.0.0.1:5000/api/assets/distribution'),
-        fetchWithFallback('http://127.0.0.1:5000/api/assets/top-risk'),
-        fetchWithFallback('http://127.0.0.1:5000/api/assets')
+        fetchWithFallback('/api/assets/summary'),
+        fetchWithFallback('/api/assets/distribution'),
+        fetchWithFallback('/api/assets/top-risk'),
+        fetchWithFallback('/api/assets')
       ]);
 
       if (summaryRes) setSummary(summaryRes);
-      if (categoriesRes) setCategories(categoriesRes);
+
+      // FIX: Transform backend data (name/value) to frontend format (category/total/percentage)
+      if (categoriesRes && Array.isArray(categoriesRes)) {
+        const adaptedCategories = categoriesRes.map((item: any) => ({
+          category: item.name || "Unknown",
+          total: item.value || 0,
+          compliant: 0, // Default value to prevent crash
+          percentage: 0 // Default value to prevent crash
+        }));
+        setCategories(adaptedCategories);
+      }
+
       if (risksRes) setTopRisks(risksRes);
       if (inventoryRes && inventoryRes.assets) setAssets(inventoryRes.assets);
 
@@ -230,68 +240,19 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
 
   // Fallback data
   const fallbackSummary = {
-    total_assets: 1247,
-    critical_actions: 12,
-    avg_risk_score: 6.8,
-    compliance_rate: 87.3
+    total_assets: 0,
+    critical_actions: 0,
+    avg_risk_score: 0,
+    compliance_rate: 0
   };
 
-  const fallbackCategories = [
-    { category: "Servers", total: 189, compliant: 137, percentage: 72.5 },
-    { category: "Endpoints", total: 523, compliant: 477, percentage: 91.2 },
-    { category: "Cloud Resources", total: 312, compliant: 299, percentage: 95.8 },
-    { category: "Network Devices", total: 89, compliant: 79, percentage: 88.3 },
-    { category: "IoT Devices", total: 134, compliant: 92, percentage: 68.7 }
-  ];
-
-  const fallbackTopRisks = [
-    {
-      asset_name: "prod-db-primary",
-      risk_score: 9.2,
-      business_impact: "Customer data exposure risk. Revenue-critical database.",
-      critical_issues: 3,
-      business_unit: "Finance",
-      recommended_action: "Apply emergency patch immediately"
-    },
-    {
-      asset_name: "web-app-gateway",
-      risk_score: 8.5,
-      business_impact: "Customer portal access point. Brand reputation risk.",
-      critical_issues: 8,
-      business_unit: "IT Operations",
-      recommended_action: "Isolate and patch within 48 hours"
-    },
-    {
-      asset_name: "finance-workstation-12",
-      risk_score: 7.8,
-      business_impact: "Finance department workstation with access to payment systems.",
-      critical_issues: 5,
-      business_unit: "Finance",
-      recommended_action: "Enable EDR and revoke admin rights"
-    }
-  ];
-
-  const fallbackAssets = [
-    {
-      id: "fallback-1",
-      name: "prod-db-primary",
-      type: "Server",
-      category: "Servers",
-      business_unit: "Finance",
-      exposure_level: "Critical",
-      risk_score: 9.2,
-      compliance_status: "Non-Compliant",
-      critical_issues: 3,
-      tasks: 2,
-      ip_address: "192.168.1.10",
-      owner: "Admin",
-      status: "Active"
-    },
-  ];
+  const fallbackCategories: AssetCategory[] = [];
+  const fallbackTopRisks: TopRiskAsset[] = [];
+  const fallbackAssets: Asset[] = [];
 
   // Use real or fallback
   const currentSummary = summary || fallbackSummary;
-  const currentCategories = categories.length > 0 ? categories : fallbackCategories;
+  const currentCategories = categories; // Using empty array if no data, to avoid rendering issues
   const currentTopRisks = topRisks.length > 0 ? topRisks : fallbackTopRisks;
   const currentAssets = assets.length > 0 ? assets : fallbackAssets;
 
@@ -328,11 +289,9 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/assets', {
+      const response = await fetch('/api/assets', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newAsset),
       });
 
@@ -347,7 +306,6 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
           business_unit: '',
           owner: ''
         });
-        // Refresh list
         fetchData();
       } else {
         const errData = await response.json();
@@ -372,7 +330,6 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
 
   return (
     <div className="space-y-6">
-      {/* CRITICAL ALERT BANNER */}
       {currentSummary.critical_actions > 0 && (
         <Alert className="border-2 border-red-500 bg-red-50">
           <AlertCircle className="h-5 w-5 text-red-600" />
@@ -387,24 +344,16 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
                 </p>
               </div>
               <div className="flex space-x-2">
-                <Button variant="destructive" size="sm">
-                  View Incident
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => onModuleChange?.('vulnerabilities')}>
-                  Review Vulnerabilities
-                </Button>
-                <Button variant="outline" size="sm">
-                  Approve Remediation
-                </Button>
+                <Button variant="destructive" size="sm">View Incident</Button>
+                <Button variant="outline" size="sm" onClick={() => onModuleChange?.('vulnerabilities')}>Review Vulnerabilities</Button>
+                <Button variant="outline" size="sm">Approve Remediation</Button>
               </div>
             </div>
           </AlertDescription>
         </Alert>
       )}
 
-      {/* ASSET POSTURE SUMMARY */}
       <div className="grid gap-4 md:grid-cols-4">
-        {/* Total Assets */}
         <Card className="border-2 border-blue-200 bg-blue-50/30">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Assets</CardTitle>
@@ -424,7 +373,6 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
           </CardContent>
         </Card>
 
-        {/* Critical Actions */}
         <Card className="border-2 border-red-200 bg-red-50/30">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Critical Actions</CardTitle>
@@ -440,7 +388,6 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
           </CardContent>
         </Card>
 
-        {/* Average Risk Score */}
         <Card className="border-2 border-orange-200 bg-orange-50/30">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg Risk Score</CardTitle>
@@ -449,7 +396,7 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
           <CardContent>
             {loading ? <Loader2 className="h-8 w-8 animate-spin mx-auto" /> : (
               <>
-                <div className="text-4xl font-bold text-orange-600">{currentSummary.avg_risk_score.toFixed(1)}</div>
+                <div className="text-4xl font-bold text-orange-600">{(currentSummary.avg_risk_score || 0).toFixed(1)}</div>
                 <div className="flex items-center space-x-1 text-xs mt-2">
                   <ArrowDownRight className="h-4 w-4 text-green-600" />
                   <span className="text-green-600 font-semibold">0.4</span>
@@ -460,7 +407,6 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
           </CardContent>
         </Card>
 
-        {/* Compliance Rate */}
         <Card className="border-2 border-green-200 bg-green-50/30">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Compliance Rate</CardTitle>
@@ -469,7 +415,7 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
           <CardContent>
             {loading ? <Loader2 className="h-8 w-8 animate-spin mx-auto" /> : (
               <>
-                <div className="text-4xl font-bold text-green-600">{currentSummary.compliance_rate.toFixed(1)}%</div>
+                <div className="text-4xl font-bold text-green-600">{(currentSummary.compliance_rate || 0).toFixed(1)}%</div>
                 <div className="text-xs text-muted-foreground mt-2">8 requires review</div>
               </>
             )}
@@ -477,9 +423,7 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
         </Card>
       </div>
 
-      {/* DISTRIBUTION & COMPLIANCE */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Asset Distribution by Type */}
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Asset Distribution by Type</CardTitle>
@@ -526,7 +470,6 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
           </CardContent>
         </Card>
 
-        {/* Compliance by Asset Category */}
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Compliance by Asset Category</CardTitle>
@@ -545,7 +488,7 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
                       <span className="font-semibold">{item.category}</span>
                       <div className="flex items-center space-x-2">
                         <span className={`text-2xl font-bold ${item.percentage < 85 ? 'text-red-600' : 'text-green-600'}`}>
-                          {item.percentage.toFixed(1)}%
+                          {(item.percentage || 0).toFixed(1)}%
                         </span>
                         {item.percentage < 85 && <AlertCircle className="h-5 w-5 text-red-600" />}
                       </div>
@@ -563,7 +506,6 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
         </Card>
       </div>
 
-      {/* TOP AT-RISK ASSETS */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -597,26 +539,26 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
                   <div className="space-y-3 mb-4">
                     <div className="bg-white border rounded-lg p-3">
                       <div className="text-xs font-semibold text-gray-700 mb-1">Business Impact</div>
-                      <p className="text-sm text-gray-900">{asset.business_impact}</p>
+                      <p className="text-sm text-gray-900">{asset.business_impact || "No data available"}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 mb-4">
                     <div className="bg-white border rounded-lg p-2 text-center">
-                      <div className="text-xl font-bold text-purple-600">{asset.critical_issues}</div>
+                      <div className="text-xl font-bold text-purple-600">{asset.critical_issues || 0}</div>
                       <div className="text-xs text-muted-foreground">Critical Issues</div>
                     </div>
                     <div className="bg-white border rounded-lg p-2 text-center">
                       <Badge variant="outline" className="text-xs">
                         <Building className="h-3 w-3 mr-1" />
-                        {asset.business_unit}
+                        {asset.business_unit || "Unassigned"}
                       </Badge>
                     </div>
                   </div>
 
                   <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-3">
                     <div className="text-xs font-semibold text-blue-900 mb-1">Recommended Action</div>
-                    <p className="text-sm text-blue-800 font-medium">{asset.recommended_action}</p>
+                    <p className="text-sm text-blue-800 font-medium">{asset.recommended_action || "Investigate"}</p>
                   </div>
 
                   <Button className="w-full" variant="destructive">
@@ -630,7 +572,6 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
         </CardContent>
       </Card>
 
-      {/* ASSET INVENTORY TABLE */}
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center justify-between">

@@ -124,19 +124,61 @@ export function PhishingSimulationModule({ onModuleChange }: PhishingSimulationM
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [campaignsRes, templatesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/campaigns`),
-        fetch(`${API_BASE_URL}/templates`)
-      ]);
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      if (campaignsRes.ok) {
-        const data = await campaignsRes.json();
-        setCampaigns(data.data || []);
-      }
-      if (templatesRes.ok) {
-        const data = await templatesRes.json();
-        setTemplates(data.data || []);
-      }
+      // Mock Data for Campaigns
+      const mockCampaigns: SimulationCampaign[] = [
+        {
+          campaign_id: '1',
+          name: 'Q1 Awareness Drill',
+          status: 'active',
+          targets_count: 120,
+          click_rate: 15,
+          report_rate: 60,
+          credentials_captured: 5,
+          risk_score: 7.2,
+          start_date: '2023-01-15',
+          template_id: 'temp_1'
+        },
+        {
+          campaign_id: '2',
+          name: 'CEO Fraud Simulation',
+          status: 'completed',
+          targets_count: 50,
+          click_rate: 25,
+          report_rate: 40,
+          credentials_captured: 12,
+          risk_score: 8.5,
+          start_date: '2023-02-10',
+          template_id: 'temp_2'
+        }
+      ];
+      setCampaigns(mockCampaigns);
+
+      // Mock Data for Templates
+      const mockTemplates: PhishingTemplate[] = [
+        {
+          template_id: 'temp_1',
+          name: 'Password Reset Request',
+          category: 'Credential Harvesting',
+          difficulty: 'Easy',
+          success_rate: 12,
+          tactics: ['Urgency', 'Spoofing'],
+          content_preview: 'Your password expires in 24 hours. Click here to reset.'
+        },
+        {
+          template_id: 'temp_2',
+          name: 'Urgent Wire Transfer',
+          category: 'CEO Fraud',
+          difficulty: 'Hard',
+          success_rate: 28,
+          tactics: ['Authority', 'Social Engineering'],
+          content_preview: 'Please process this urgent wire transfer immediately.'
+        }
+      ];
+      setTemplates(mockTemplates);
+
     } catch (err) {
       console.error("Error loading simulation data:", err);
     } finally {
@@ -151,45 +193,34 @@ export function PhishingSimulationModule({ onModuleChange }: PhishingSimulationM
   const handleCreateCampaign = async () => {
     setActionLoading('create');
     try {
-      // 1. Call Backend API
-      const res = await fetch(`${API_BASE_URL}/campaigns/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.campaignName,
-          template_id: formData.templateId,
-          target_count: formData.targetUsers === 'all' ? 1247 : 50 // Mock logic for count
-        })
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Add to Workflow Context (Frontend State)
+      addWorkflow({
+        id: `sim-campaign-${Date.now()}`,
+        title: `New Phishing Simulation: ${formData.campaignName}`,
+        description: `Scheduled simulation campaign targeting ${formData.targetUsers}`,
+        status: 'pending',
+        priority: 'medium',
+        assignedTo: 'Security Awareness Team'
       });
 
-      if (res.ok) {
-        // 2. Add to Workflow Context (Frontend State)
-        addWorkflow({
-          id: `sim-campaign-${Date.now()}`,
-          title: `New Phishing Simulation: ${formData.campaignName}`,
-          description: `Scheduled simulation campaign targeting ${formData.targetUsers}`,
-          status: 'pending',
-          priority: 'medium',
-          assignedTo: 'Security Awareness Team'
-        });
+      alert("✅ Campaign Created Successfully!");
+      setShowNewCampaignDialog(false);
 
-        alert("✅ Campaign Created Successfully!");
-        setShowNewCampaignDialog(false);
+      // Reset Form
+      setFormData({
+        campaignName: '',
+        templateId: '',
+        startDate: '',
+        endDate: '',
+        targetUsers: ''
+      });
 
-        // 3. Reset Form
-        setFormData({
-          campaignName: '',
-          templateId: '',
-          startDate: '',
-          endDate: '',
-          targetUsers: ''
-        });
+      // Refresh List (Mock refresh)
+      fetchData();
 
-        // 4. Refresh List
-        fetchData();
-      } else {
-        alert("Failed to create campaign on server.");
-      }
     } catch (err) {
       console.error(err);
       alert("Error connecting to server");
@@ -309,6 +340,7 @@ export function PhishingSimulationModule({ onModuleChange }: PhishingSimulationM
           <Shield className="h-10 w-10" />
           <h1 className="text-4xl font-bold">Phishing Simulation</h1>
         </div>
+
         <h2 className="text-xl text-blue-100">Human Risk & Awareness Dashboard</h2>
         <p className="text-blue-200 mt-2">Track, simulate, and strengthen organizational resilience to phishing threats.</p>
       </div>

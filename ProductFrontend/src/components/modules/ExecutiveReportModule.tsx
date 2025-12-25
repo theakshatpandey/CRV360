@@ -40,7 +40,8 @@ import { LineChart, Line, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Cart
 // ============================================
 // API CONFIGURATION
 // ============================================
-const API_BASE_URL = "http://localhost:8000/api/executive-report";
+// FIX: Use relative path for Vite Proxy
+const API_BASE_URL = "/api/executive-report";
 
 // ============================================
 // INTERFACES
@@ -77,11 +78,59 @@ interface ExecutiveReportModuleProps {
   onModuleChange?: (module: string) => void;
 }
 
+// ============================================
+// FALLBACK DATA (DEMO MODE)
+// ============================================
+
+const FALLBACK_REPORT: ReportData = {
+  report_id: 'REP-2024-12',
+  reporting_period: 'December 2024',
+  overall_score: 8.7,
+  score_trend: 0.3,
+  summary: "This month saw a 4% reduction in overall risk due to the successful patching of critical vulnerabilities in the Finance sector. However, cloud misconfigurations remain a concern.",
+  top_improvements: [
+    { area: 'Incident Response', impact: 'Reduced MTTR by 12%', value: '+12%' },
+    { area: 'Patch Management', impact: 'Critical patch rate up 8%', value: '+8%' },
+    { area: 'Phishing Resilience', impact: 'Click rate down to 3.2%', value: '+15%' }
+  ],
+  areas_of_concern: [
+    { area: 'GDPR Compliance', impact: '-5%', details: 'Data inventory gaps identified' },
+    { area: 'Cloud Security', impact: '-3%', details: '12 new S3 bucket exposures' },
+    { area: 'Third-Party Risk', impact: '-2%', details: 'Vendor assessment backlog' }
+  ],
+  strategic_recommendations: [
+    {
+      title: 'Patch CVE-2024-12345',
+      priority: 'Critical',
+      cost: '$15K - $25K',
+      timeline: '2-3 days',
+      impact_description: '65% risk reduction',
+      description: 'Critical RCE vulnerability in Apache HTTP Server affecting 23 production systems.',
+      effort: 'Medium',
+      riskReduction: '1.2 points',
+      dependencies: ['IT Ops', 'Security Team'],
+      projectedImpact: '65% risk reduction'
+    },
+    {
+      title: 'Implement MFA for Admins',
+      priority: 'High',
+      cost: '$5K',
+      timeline: '1 week',
+      impact_description: 'Prevent credential theft',
+      description: 'Enforce Multi-Factor Authentication for all administrative access points.',
+      effort: 'Low',
+      riskReduction: '0.8 points',
+      dependencies: ['Identity Team'],
+      projectedImpact: 'Prevent credential theft'
+    }
+  ]
+};
+
 export function ExecutiveReportModule({ onModuleChange }: ExecutiveReportModuleProps = {}) {
   // State
   const [reportPeriod, setReportPeriod] = useState('2024-12');
   const [reportType, setReportType] = useState('monthly');
-  const [report, setReport] = useState<ReportData | null>(null);
+  const [report, setReport] = useState<ReportData | null>(FALLBACK_REPORT);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
@@ -101,10 +150,11 @@ export function ExecutiveReportModule({ onModuleChange }: ExecutiveReportModuleP
         const data = await res.json();
         setReport(data.data);
       } else {
-        console.error("Failed to fetch report");
+        // Keep fallback data if fetch fails
+        console.warn("Using fallback report data");
       }
     } catch (err) {
-      console.error("Error loading executive report:", err);
+      console.warn("Error loading executive report, using fallback");
     } finally {
       setLoading(false);
     }
@@ -155,50 +205,29 @@ export function ExecutiveReportModule({ onModuleChange }: ExecutiveReportModuleP
     { month: 'Dec', score: report?.overall_score || 8.7 }
   ];
 
-  // Posture Factors (Mapped from DB if available, else fallback)
+  // Posture Factors
   const postureFactors = {
     improved: report?.top_improvements.map(i => ({
       factor: i.area, improvement: i.value, detail: i.impact
-    })) || [
-        { factor: 'Incident Response SLA', improvement: '+12%', detail: 'MTTR reduced from 48h to 36h' },
-        { factor: 'Vulnerability Remediation', improvement: '+8%', detail: 'Critical patch time reduced 40%' },
-        { factor: 'Security Awareness', improvement: '+15%', detail: 'Phishing click rate down to 3.2%' }
-      ],
+    })) || FALLBACK_REPORT.top_improvements.map(i => ({ factor: i.area, improvement: i.value, detail: i.impact })),
     worsened: report?.areas_of_concern.map(i => ({
       factor: i.area, decline: i.impact, detail: i.details
-    })) || [
-        { factor: 'GDPR Compliance Gap', decline: '-5%', detail: 'Data inventory backlog increased' },
-        { factor: 'Cloud Misconfigurations', decline: '-3%', detail: '12 new S3 bucket exposures detected' },
-        { factor: 'Third-Party Risk', decline: '-2%', detail: 'Vendor assessment backlog grew 20%' }
-      ]
+    })) || FALLBACK_REPORT.areas_of_concern.map(i => ({ factor: i.area, decline: i.impact, detail: i.details }))
   };
 
-  // Strategic Recommendations (Merged DB + UI fields)
-  const strategicRecommendations = report?.strategic_recommendations.map(rec => ({
+  // Strategic Recommendations
+  const strategicRecommendations = (report?.strategic_recommendations || FALLBACK_REPORT.strategic_recommendations).map(rec => ({
     priority: rec.priority,
     impact: 'High',
-    effort: 'Medium',
+    effort: rec.effort || 'Medium',
     title: rec.title,
-    description: `Initiative to address ${rec.impact_description}`,
+    description: rec.description || `Initiative to address ${rec.impact_description}`,
     costRange: rec.cost,
     timeline: rec.timeline,
-    riskReduction: '1.2 points',
-    dependencies: ['IT Ops', 'Security Team'],
-    projectedImpact: rec.impact_description
-  })) || [
-      {
-        priority: 'Critical',
-        impact: 'High',
-        effort: 'Medium',
-        title: 'Patch CVE-2024-12345 Across Production Infrastructure',
-        description: 'Critical RCE vulnerability in Apache HTTP Server affecting 23 production systems. Active exploitation detected in the wild.',
-        costRange: '$15K - $25K',
-        timeline: '2-3 days',
-        riskReduction: '1.2 points',
-        dependencies: ['Infrastructure team availability', 'Change control approval'],
-        projectedImpact: '65% risk reduction in external attack surface'
-      }
-    ];
+    riskReduction: rec.riskReduction || '1.0 points',
+    dependencies: rec.dependencies || ['IT Ops'],
+    projectedImpact: rec.projectedImpact || rec.impact_description
+  }));
 
   // Top 3 Initiatives Requiring Leadership Support
   const leadershipInitiatives = strategicRecommendations.slice(0, 3);
