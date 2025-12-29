@@ -55,10 +55,9 @@ import {
   Area
 } from 'recharts';
 
-// ============================================
-// API CONFIGURATION
-// ============================================
-const API_BASE_URL = "http://localhost:8000/api/phishing-simulation";
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
+const SIMULATION_API = `${API_BASE}/api/phishing-simulation`;
+
 
 // ============================================
 // INTERFACES
@@ -124,11 +123,25 @@ export function PhishingSimulationModule({ onModuleChange }: PhishingSimulationM
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const [campaignRes, templateRes] = await Promise.all([
+        fetch(`${SIMULATION_API}/campaigns`),
+        fetch(`${SIMULATION_API}/templates`)
+      ]);
 
-      // Mock Data for Campaigns
-      const mockCampaigns: SimulationCampaign[] = [
+      if (!campaignRes.ok || !templateRes.ok) {
+        throw new Error("Backend not ready");
+      }
+
+      const campaignsData = await campaignRes.json();
+      const templatesData = await templateRes.json();
+
+      setCampaigns(campaignsData);
+      setTemplates(templatesData);
+    } catch (err) {
+      console.warn("Using mock phishing simulation data");
+
+      // ---- FALLBACK MOCK DATA ----
+      setCampaigns([
         {
           campaign_id: '1',
           name: 'Q1 Awareness Drill',
@@ -153,11 +166,9 @@ export function PhishingSimulationModule({ onModuleChange }: PhishingSimulationM
           start_date: '2023-02-10',
           template_id: 'temp_2'
         }
-      ];
-      setCampaigns(mockCampaigns);
+      ]);
 
-      // Mock Data for Templates
-      const mockTemplates: PhishingTemplate[] = [
+      setTemplates([
         {
           template_id: 'temp_1',
           name: 'Password Reset Request',
@@ -176,15 +187,12 @@ export function PhishingSimulationModule({ onModuleChange }: PhishingSimulationM
           tactics: ['Authority', 'Social Engineering'],
           content_preview: 'Please process this urgent wire transfer immediately.'
         }
-      ];
-      setTemplates(mockTemplates);
-
-    } catch (err) {
-      console.error("Error loading simulation data:", err);
+      ]);
     } finally {
       setLoading(false);
     }
   };
+
 
   // ============================================
   // ACTIONS
@@ -194,7 +202,20 @@ export function PhishingSimulationModule({ onModuleChange }: PhishingSimulationM
     setActionLoading('create');
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await fetch(`${SIMULATION_API}/campaigns`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name: formData.campaignName,
+          template_id: formData.templateId,
+          start_date: formData.startDate,
+          end_date: formData.endDate,
+          target_group: formData.targetUsers
+        })
+      });
+
 
       // Add to Workflow Context (Frontend State)
       addWorkflow({

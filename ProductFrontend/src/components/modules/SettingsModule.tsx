@@ -61,10 +61,10 @@ import {
   LogOut
 } from 'lucide-react';
 
-// ============================================
-// API CONFIGURATION
-// ============================================
-const API_BASE_URL = "http://localhost:8000/api/settings";
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
+const SETTINGS_API = `${API_BASE}/api/settings`;
+
+
 
 interface SettingsModuleProps {
   onModuleChange?: (module: string) => void;
@@ -108,8 +108,8 @@ export function SettingsModule({ onModuleChange }: SettingsModuleProps = {}) {
     setLoading(true);
     try {
       const [settingsRes, usersRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/`),
-        fetch(`${API_BASE_URL}/users`)
+        fetch(`${SETTINGS_API}/`),
+        fetch(`${SETTINGS_API}/users`)
       ]);
 
       if (settingsRes.ok) {
@@ -144,7 +144,7 @@ export function SettingsModule({ onModuleChange }: SettingsModuleProps = {}) {
   const handleSaveProfile = async () => {
     setSaving(true);
     try {
-      await fetch(`${API_BASE_URL}/update-section?section=profile`, {
+      await fetch(`${SETTINGS_API}/update-section?section=profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(profileData)
@@ -186,7 +186,7 @@ export function SettingsModule({ onModuleChange }: SettingsModuleProps = {}) {
     reader.readAsDataURL(file);
 
     try {
-      await fetch(`${API_BASE_URL}/profile/upload-photo`, { method: 'POST', body: formData });
+      await fetch(`${SETTINGS_API}/profile/upload-photo`, { method: 'POST', body: formData });
       toast.success('Profile photo uploaded successfully!');
     } catch (err) {
       toast.error("Failed to upload photo.");
@@ -197,7 +197,7 @@ export function SettingsModule({ onModuleChange }: SettingsModuleProps = {}) {
   const handleSaveSecurity = async () => {
     setSaving(true);
     try {
-      await fetch(`${API_BASE_URL}/update-section?section=security_policy`, {
+      await fetch(`${SETTINGS_API}/update-section?section=security_policy`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(securitySettings)
@@ -213,7 +213,7 @@ export function SettingsModule({ onModuleChange }: SettingsModuleProps = {}) {
   const regenerateApiKey = async () => {
     if (!confirm("Regenerate API Key? This will break existing integrations.")) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/security/regenerate-api-key`, { method: 'POST' });
+      const res = await fetch(`${SETTINGS_API}/security/regenerate-api-key`, { method: 'POST' });
       const data = await res.json();
       setSecuritySettings(prev => ({ ...prev, api_key: data.api_key }));
       toast.success("API Key regenerated.");
@@ -226,7 +226,7 @@ export function SettingsModule({ onModuleChange }: SettingsModuleProps = {}) {
   const handleSaveNotifications = async () => {
     setSaving(true);
     try {
-      await fetch(`${API_BASE_URL}/update-section?section=notifications`, {
+      await fetch(`${SETTINGS_API}/update-section?section=notifications`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(notifications)
@@ -242,7 +242,7 @@ export function SettingsModule({ onModuleChange }: SettingsModuleProps = {}) {
   // --- Integrations ---
   const toggleIntegration = async (name: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/integrations/${name}/toggle`, { method: 'POST' });
+      const res = await fetch(`${SETTINGS_API}/integrations/${name}/toggle`, { method: 'POST' });
       const data = await res.json();
       // Update local state
       setIntegrations(prev => prev.map(i => i.name === name ? { ...i, status: data.new_status } : i));
@@ -254,7 +254,7 @@ export function SettingsModule({ onModuleChange }: SettingsModuleProps = {}) {
 
   const handleAddIntegration = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/integrations/add`, {
+      const res = await fetch(`${SETTINGS_API}/integrations/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: "New Integration Demo" })
@@ -270,7 +270,7 @@ export function SettingsModule({ onModuleChange }: SettingsModuleProps = {}) {
 
   const saveWebhook = async () => {
     try {
-      await fetch(`${API_BASE_URL}/update-section?section=webhook_config`, {
+      await fetch(`${SETTINGS_API}/update-section?section=webhook_config`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(webhookConfig)
@@ -284,7 +284,7 @@ export function SettingsModule({ onModuleChange }: SettingsModuleProps = {}) {
   // --- Users ---
   const handleAddUser = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/users/add`, {
+      const res = await fetch(`${SETTINGS_API}/users/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newUser)
@@ -292,7 +292,7 @@ export function SettingsModule({ onModuleChange }: SettingsModuleProps = {}) {
       if (res.ok) {
         setShowAddUser(false);
         setNewUser({ name: '', email: '', role: 'Analyst' });
-        const userData = await (await fetch(`${API_BASE_URL}/users`)).json();
+        const userData = await (await fetch(`${SETTINGS_API}/users`)).json();
         setUsers(userData.data);
         toast.success("User added successfully.");
       }
@@ -304,7 +304,7 @@ export function SettingsModule({ onModuleChange }: SettingsModuleProps = {}) {
   const handleDeleteUser = async (id: string) => {
     if (!confirm("Are you sure you want to delete this user?")) return;
     try {
-      await fetch(`${API_BASE_URL}/users/${id}`, { method: 'DELETE' });
+      await fetch(`${SETTINGS_API}/users/${id}`, { method: 'DELETE' });
       setUsers(prev => prev.filter(u => u.id !== id));
       toast.success("User deleted.");
     } catch (err) {
@@ -315,7 +315,7 @@ export function SettingsModule({ onModuleChange }: SettingsModuleProps = {}) {
   // --- System ---
   const handleClearCache = async () => {
     try {
-      await fetch(`${API_BASE_URL}/system/clear-cache`, { method: 'POST' });
+      await fetch(`${SETTINGS_API}/system/clear-cache`, { method: 'POST' });
       toast.success("System cache cleared.");
     } catch (err) {
       toast.error("Failed to clear cache.");
@@ -324,7 +324,7 @@ export function SettingsModule({ onModuleChange }: SettingsModuleProps = {}) {
 
   const handleExportLogs = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/system/logs/export`);
+      const res = await fetch(`${SETTINGS_API}/system/logs/export`);
       const data = await res.json();
       const blob = new Blob([data.content], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);

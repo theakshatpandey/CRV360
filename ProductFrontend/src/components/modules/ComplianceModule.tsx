@@ -48,12 +48,7 @@ import {
   Radar
 } from 'recharts';
 
-// ============================================
-// API CONFIGURATION
-// ============================================
 
-// FIX: Use relative path to allow Vite Proxy to handle the connection
-const API_BASE_URL = "/api/compliance";
 
 // ============================================
 // INTERFACES & TYPES
@@ -203,6 +198,8 @@ const FALLBACK_KPIS: ExecutiveKPIs = {
 // ============================================
 
 export function ComplianceModule({ onModuleChange }: ComplianceModuleProps = {}) {
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
+
   // ============================================
   // STATE MANAGEMENT
   // ============================================
@@ -245,7 +242,8 @@ export function ComplianceModule({ onModuleChange }: ComplianceModuleProps = {})
       // Helper to fetch with relative path
       const fetchWithFallback = async (endpoint: string) => {
         try {
-          const res = await fetch(`${API_BASE_URL}${endpoint}`);
+          const res = await fetch(`${API_BASE}/api/compliance${endpoint}`);
+
           if (!res.ok) throw new Error('Not OK');
           return await res.json();
         } catch (e) {
@@ -294,7 +292,10 @@ export function ComplianceModule({ onModuleChange }: ComplianceModuleProps = {})
       // Check if it's a real ID or a fallback ID
       if (violationId > 1000) {
         // Real API call
-        const response = await fetch(`${API_BASE_URL}/violations/${violationId}`);
+        const response = await fetch(
+          `${API_BASE}/api/compliance/violations/${violationId}`
+        );
+
         if (response.ok) {
           const data = await response.json();
           setSelectedViolation(data.data);
@@ -325,7 +326,8 @@ export function ComplianceModule({ onModuleChange }: ComplianceModuleProps = {})
     setLoadingActionId(actionId);
     try {
       const response = await fetch(
-        `${API_BASE_URL}/actions/${actionId}/take-action`,
+        `${API_BASE}/api/compliance/actions/${actionId}/take-action`,
+
         {
           method: "POST",
           headers: {
@@ -364,7 +366,8 @@ export function ComplianceModule({ onModuleChange }: ComplianceModuleProps = {})
     setGeneratingReport(true);
     try {
       const response = await fetch(
-        `${API_BASE_URL}/evidence/generate-gap-report`,
+        `${API_BASE}/api/compliance/evidence/generate-gap-report`,
+
         {
           method: "POST",
           headers: {

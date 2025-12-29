@@ -37,11 +37,9 @@ import {
 import { Progress } from '../ui/progress';
 import { LineChart, Line, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
-// ============================================
-// API CONFIGURATION
-// ============================================
-// FIX: Use relative path for Vite Proxy
-const API_BASE_URL = "/api/executive-report";
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
+const EXEC_REPORT_API = `${API_BASE}/api/executive-report`;
+
 
 // ============================================
 // INTERFACES
@@ -145,7 +143,8 @@ export function ExecutiveReportModule({ onModuleChange }: ExecutiveReportModuleP
   const fetchReport = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/latest`);
+      const res = await fetch(`${EXEC_REPORT_API}/latest`);
+
       if (res.ok) {
         const data = await res.json();
         setReport(data.data);
@@ -167,7 +166,8 @@ export function ExecutiveReportModule({ onModuleChange }: ExecutiveReportModuleP
   const handleExportPDF = async () => {
     setDownloading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/export-pdf`);
+      const res = await fetch(`${EXEC_REPORT_API}/export-pdf`);
+
 
       if (res.ok) {
         const blob = await res.blob();

@@ -61,10 +61,9 @@ import {
   Area
 } from 'recharts';
 
-// ============================================
-// API CONFIGURATION
-// ============================================
-const API_BASE_URL = "/api/incident-response";
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
+const INCIDENT_API = `${API_BASE}/api/incident-response`;
+
 
 // ============================================
 // INTERFACES
@@ -238,7 +237,8 @@ export function IncidentResponseModule({ onModuleChange }: IncidentResponseModul
     try {
       const fetchWithFallback = async (endpoint: string) => {
         try {
-          const res = await fetch(`${API_BASE_URL}${endpoint}`);
+          const res = await fetch(`${INCIDENT_API}${endpoint}`);
+
           if (!res.ok) throw new Error('Not OK');
           return await res.json();
         } catch (e) {
@@ -285,7 +285,8 @@ export function IncidentResponseModule({ onModuleChange }: IncidentResponseModul
   const handleCreateIncident = async () => {
     setActionLoading('create');
     try {
-      const res = await fetch(`${API_BASE_URL}/incidents/create`, {
+      const res = await fetch(`${INCIDENT_API}/incidents/create`, {
+
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -333,7 +334,8 @@ export function IncidentResponseModule({ onModuleChange }: IncidentResponseModul
 
   const updateIncidentStatus = async (incidentId: string, newStatus: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/incidents/${incidentId}/status?status=${newStatus}`, {
+      const res = await fetch(`${INCIDENT_API}/incidents/${incidentId}/status?status=${newStatus}`, {
+
         method: 'POST'
       });
       if (res.ok) {

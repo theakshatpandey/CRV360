@@ -82,10 +82,9 @@ import {
   Legend
 } from 'recharts';
 
-// ============================================
-// API CONFIGURATION
-// ============================================
-const API_BASE_URL = "/api/phishing-intelligence";
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
+const PHISHING_API = `${API_BASE}/api/phishing-intelligence`;
+
 
 // ============================================
 // INTERFACES & TYPES
@@ -343,23 +342,34 @@ export function PhishingIntelligenceModule({ onModuleChange }: any = {}) {
   // ============================================
 
   useEffect(() => {
-    // Initial Data Load Simulation
     const loadData = async () => {
       setIsLoading(true);
       try {
-        // Simulating network delay
-        setTimeout(() => {
-          setEmails(generateMockEmails(100));
-          setDomains(generateMockDomains(50));
-          setIsLoading(false);
-        }, 1200);
-      } catch (e) {
-        console.error("Failed to load data", e);
+        const [statsRes, emailsRes, domainsRes, simulationsRes] = await Promise.all([
+          fetch(`${PHISHING_API}/stats`),
+          fetch(`${PHISHING_API}/emails`),
+          fetch(`${PHISHING_API}/domains`),
+          fetch(`${PHISHING_API}/simulations`)
+        ]);
+
+        if (statsRes.ok) setStats(await statsRes.json());
+        if (emailsRes.ok) setEmails(await emailsRes.json());
+        if (domainsRes.ok) setDomains(await domainsRes.json());
+        if (simulationsRes.ok) setSimulations(await simulationsRes.json());
+      } catch (err) {
+        console.warn("Using mock phishing intelligence data");
+        setStats(MOCK_STATS);
+        setEmails(generateMockEmails(100));
+        setDomains(generateMockDomains(50));
+        setSimulations(MOCK_SIMULATIONS);
+      } finally {
         setIsLoading(false);
       }
     };
+
     loadData();
   }, []);
+
 
   // ============================================
   // COMPUTED VALUES

@@ -43,10 +43,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
-// ============================================
-// API CONFIGURATION
-// ============================================
-const API_BASE_URL = "/api/events";
+
 
 // ============================================
 // INTERFACES
@@ -232,6 +229,10 @@ export function EventsModule({ onModuleChange }: EventsModuleProps = {}) {
   // ============================================
   // STATE MANAGEMENT
   // ============================================
+
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
+  const EVENTS_API = `${API_BASE}/api/events`;
+
   const [activeTab, setActiveTab] = useState('threat-summary');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -282,7 +283,8 @@ export function EventsModule({ onModuleChange }: EventsModuleProps = {}) {
     try {
       const fetchWithFallback = async (endpoint: string) => {
         try {
-          const res = await fetch(`${API_BASE_URL}${endpoint}`);
+          const res = await fetch(`${EVENTS_API}${endpoint}`);
+
           if (!res.ok) throw new Error('Not OK');
           return await res.json();
         } catch (e) {
@@ -388,7 +390,7 @@ export function EventsModule({ onModuleChange }: EventsModuleProps = {}) {
   const launchIncidentResponse = async (campaignId: string) => {
     setActionLoading(campaignId);
     try {
-      const res = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/launch-response`, { method: 'POST' });
+      const res = await fetch(`${EVENTS_API}/campaigns/${campaignId}/launch-response`, { method: 'POST' });
       if (res.ok) {
         const data = await res.json();
         alert(`✅ Incident Response Initiated\nID: ${data.data.response_id}`);
@@ -406,7 +408,8 @@ export function EventsModule({ onModuleChange }: EventsModuleProps = {}) {
   const generateExecutiveBrief = async (campaignId: string) => {
     setActionLoading(campaignId);
     try {
-      const res = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/generate-executive-brief`, { method: 'POST' });
+      const res = await fetch(`${EVENTS_API}/campaigns/${campaignId}/generate-executive-brief`, { method: 'POST' });
+
       if (res.ok) {
         alert("📄 Executive Brief Generated Successfully");
       } else {
@@ -422,7 +425,8 @@ export function EventsModule({ onModuleChange }: EventsModuleProps = {}) {
   const generateAlertReport = async (alertId: string) => {
     setActionLoading(alertId);
     try {
-      const res = await fetch(`${API_BASE_URL}/alerts/${alertId}/generate-report`, { method: 'POST' });
+      const res = await fetch(`${EVENTS_API}/alerts/${alertId}/generate-report`, { method: 'POST' });
+
       if (res.ok) {
         alert("📄 Alert Forensic Report Generated");
       } else {

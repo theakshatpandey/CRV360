@@ -165,6 +165,7 @@ interface Asset {
 export function AssetManagementModule({ onModuleChange }: AssetManagementModuleProps = {}) {
   const { user } = useAuth();
 
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'executive' | 'analyst'>('executive');
@@ -194,7 +195,8 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
     try {
       const fetchWithFallback = async (url: string) => {
         try {
-          const res = await fetch(url);
+          const res = await fetch(`${API_BASE}${url}`);
+
           if (!res.ok) throw new Error('Not OK');
           return await res.json();
         } catch (e) {
@@ -289,7 +291,8 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
     }
 
     try {
-      const response = await fetch('/api/assets', {
+      const response = await fetch(`${API_BASE}/api/assets`, {
+
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newAsset),

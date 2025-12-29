@@ -1,3 +1,8 @@
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
+if (!API_BASE) {
+  throw new Error("VITE_API_BASE_URL is not defined");
+}
+
 import { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -135,13 +140,14 @@ export function HomePage({ onModuleChange }: HomePageProps = {}) {
           alertsRes,
           risksRes
         ] = await Promise.all([
-          fetch('http://127.0.0.1:8000/api/metrics/key').then(r => r.json()),
-          fetch('http://127.0.0.1:8000/api/metrics/operational').then(r => r.json()),
-          fetch('http://127.0.0.1:8000/api/metrics/trends/5days').then(r => r.json()),
-          fetch('http://127.0.0.1:8000/api/calendar/upcoming').then(r => r.json()),
-          fetch('http://127.0.0.1:8000/api/metrics/module-health').then(r => r.json()),
-          fetch('http://127.0.0.1:8000/api/metrics/alerts/today').then(r => r.json()),
-          fetch('http://127.0.0.1:8000/api/risks/top').then(r => r.json())
+          fetch(`${API_BASE}/api/metrics/key`).then(r => r.json()),
+          fetch(`${API_BASE}/api/metrics/operational`).then(r => r.json()),
+          fetch(`${API_BASE}/api/metrics/trends/5days`).then(r => r.json()),
+          fetch(`${API_BASE}/api/calendar/upcoming`).then(r => r.json()),
+          fetch(`${API_BASE}/api/metrics/module-health`).then(r => r.json()),
+          fetch(`${API_BASE}/api/metrics/alerts/today`).then(r => r.json()),
+          fetch(`${API_BASE}/api/risks/top`).then(r => r.json())
+
         ]);
 
         setKeyMetrics(metricsRes);

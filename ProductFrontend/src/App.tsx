@@ -15,10 +15,13 @@ import { SettingsModule } from './components/modules/SettingsModule';
 import { PhishingIntelligenceModule } from './components/modules/PhishingIntelligenceModule';
 import { PhishingSimulationModule } from './components/modules/PhishingSimulationModule';
 import { Toaster } from './components/ui/sonner';
-import BackendStatus from "./components/ui/BackendStatus";
 
 
 function AppContent() {
+  console.log(
+    "VITE_API_BASE_URL →",
+    import.meta.env.VITE_API_BASE_URL
+  );
   const { user, isLoading: authLoading } = useAuth();
   const [currentModule, setCurrentModule] = useState('home');
   const [isInitializing, setIsInitializing] = useState(true);

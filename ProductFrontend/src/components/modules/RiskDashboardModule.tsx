@@ -122,6 +122,8 @@ const FALLBACK_RECOMMENDATIONS = [
 
 export function RiskDashboardModule({ onModuleChange }: RiskDashboardModuleProps = {}) {
   const [effortFilter, setEffortFilter] = useState('all');
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
+
   const [costFilter, setCostFilter] = useState('all');
   const [riskReductionFilter, setRiskReductionFilter] = useState('all');
   const [businessUnitFilter, setBusinessUnitFilter] = useState('all');
@@ -143,7 +145,8 @@ export function RiskDashboardModule({ onModuleChange }: RiskDashboardModuleProps
         const fetchWithFallback = async (url: string) => {
           try {
             // Updated to use relative path for Proxy support
-            const res = await fetch(url);
+            const res = await fetch(`${API_BASE}${url}`);
+
             if (!res.ok) throw new Error('Not OK');
             return await res.json();
           } catch (e) {
