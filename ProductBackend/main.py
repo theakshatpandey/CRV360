@@ -13,7 +13,9 @@ app = FastAPI(title="CRV360 Unified Backend")
 # CORS (Allows your React Frontend to talk to this Backend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["https://crv360-frontend.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5173"],  # Allows all origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
