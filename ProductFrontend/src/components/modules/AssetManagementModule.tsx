@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Loader2, X } from 'lucide-react';
+import { CardGridSkeleton } from "../skeletons/CardGridSkeleton";
+import { TableSkeleton } from "../skeletons/TableSkeleton";
+import { ChartSkeleton } from "../skeletons/ChartSkeleton";
+
 import {
   Shield,
   Search,
