@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException, Request, Body, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from bson import ObjectId
 from datetime import datetime
+from routers import assets_import
+from routers.assets_jobs import router as asset_jobs_router
 import os
 
 # --- 1. SETUP & DATABASE ---
@@ -14,8 +16,8 @@ app = FastAPI(title="CRV360 Unified Backend")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://crv360-frontend.vercel.app",
-        "http://localhost:3000",
-        "http://localhost:5173"],  # Allows all origins
+                   "http://localhost:3000",
+                "http://localhost:5173"],  # Allows all origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -213,6 +215,8 @@ app.include_router(phishing_simulation.router, prefix="/api", tags=["phishing-si
 app.include_router(incident_response.router, prefix="/api", tags=["incident-response"])
 app.include_router(executive_report.router, prefix="/api", tags=["executive-report"])
 app.include_router(settings.router, prefix="/api", tags=["settings"])
+app.include_router(assets_import.router)
+app.include_router(asset_jobs_router)
 
 @app.get("/")
 def home():

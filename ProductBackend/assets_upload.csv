@@ -1,0 +1,4 @@
+asset_name,asset_type,ip_address,business_unit,criticality,environment,owner,os,cloud_provider,region,tags
+web-server-01,Server,10.0.1.10,Finance,Critical,Production,IT Ops,Ubuntu,AWS,ap-south-1,public-facing,core
+hr-app-01,Application,10.0.2.15,HR,High,Production,HR IT,Windows,Azure,central-india,internal
+laptop-007,Endpoint,192.168.1.77,Sales,Medium,Production,Sales Ops,macOS,,office,remote

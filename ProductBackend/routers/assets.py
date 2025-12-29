@@ -1,17 +1,41 @@
 from fastapi import APIRouter
 from database import db
+from services.org_context import get_current_org
 
-router = APIRouter()
+router = APIRouter(prefix="/api/assets", tags=["Assets"])
 
-@router.get("/assets/summary")
+assets = db["assets"]
+
+# -----------------------------
+# 1️⃣ ASSET SUMMARY (Executive KPIs)
+# -----------------------------
+@router.get("/summary")
 async def get_asset_summary():
-    assets = db["assets"]
-    total = assets.count_documents({})
-    critical_actions = assets.count_documents({"exposure_level": "Critical"})
-    avg_risk = list(assets.aggregate([
+    org_id = get_current_org()
+
+    total = assets.count_documents({
+        "org_id": org_id
+    })
+
+    critical_actions = assets.count_documents({
+        "org_id": org_id,
+        "exposure_level": "Critical"
+    })
+
+    avg_risk_cursor = assets.aggregate([
+        {"$match": {"org_id": org_id}},
         {"$group": {"_id": None, "avg": {"$avg": "$risk_score"}}}
-    ]))[0]["avg"] if total > 0 else 0
-    compliance_rate = round((assets.count_documents({"compliance_status": "Compliant"}) / total) * 100, 1) if total > 0 else 0
+    ])
+
+    avg_risk_result = list(avg_risk_cursor)
+    avg_risk = avg_risk_result[0]["avg"] if avg_risk_result else 0
+
+    compliant = assets.count_documents({
+        "org_id": org_id,
+        "compliance_status": "Compliant"
+    })
+
+    compliance_rate = round((compliant / total) * 100, 1) if total > 0 else 0
 
     return {
         "total_assets": total,
@@ -20,17 +44,69 @@ async def get_asset_summary():
         "compliance_rate": compliance_rate
     }
 
-@router.get("/assets/distribution")
+
+# -----------------------------
+# 2️⃣ ASSET DISTRIBUTION (Charts)
+# -----------------------------
+@router.get("/distribution")
 async def get_asset_distribution():
-    collection = db["asset_categories"]
-    return list(collection.find({}, {"_id": 0}))
+    org_id = get_current_org()
 
-@router.get("/assets/top-risk")
+    pipeline = [
+        {"$match": {"org_id": org_id}},
+        {
+            "$group": {
+                "_id": "$asset_type",
+                "total": {"$sum": 1}
+            }
+        },
+        {
+            "$project": {
+                "_id": 0,
+                "category": "$_id",
+                "total": 1
+            }
+        }
+    ]
+
+    return list(assets.aggregate(pipeline))
+
+
+# -----------------------------
+# 3️⃣ TOP RISK ASSETS (CISO Focus)
+# -----------------------------
+@router.get("/top-risk")
 async def get_top_risk_assets():
-    collection = db["risky_assets"]
-    return list(collection.find({}, {"_id": 0}).limit(3))
+    org_id = get_current_org()
 
-@router.get("/assets/inventory")
+    cursor = assets.find(
+        {"org_id": org_id},
+        {
+            "_id": 0,
+            "asset_name": 1,
+            "risk_score": 1,
+            "business_unit": 1,
+            "criticality": 1,
+            "exposure_level": 1,
+            "compliance_status": 1
+        }
+    ).sort("risk_score", -1).limit(3)
+
+    return list(cursor)
+
+
+# -----------------------------
+# 4️⃣ ASSET INVENTORY (Table)
+# -----------------------------
+@router.get("")
 async def get_asset_inventory():
-    collection = db["assets"]
-    return list(collection.find({}, {"_id": 0}))
+    org_id = get_current_org()
+
+    cursor = assets.find(
+        {"org_id": org_id},
+        {"_id": 0}
+    )
+
+    return {
+        "assets": list(cursor)
+    }
