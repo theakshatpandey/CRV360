@@ -1,37 +1,35 @@
 from fastapi import APIRouter
 from database import db
-from services.org_context import get_current_org
+from core.org_context import get_current_org
 
 router = APIRouter(prefix="/api/assets", tags=["Assets"])
 
 assets = db["assets"]
 
 # -----------------------------
-# 1️⃣ ASSET SUMMARY (Executive KPIs)
+# 1️⃣ ASSET SUMMARY
 # -----------------------------
 @router.get("/summary")
 async def get_asset_summary():
-    org_id = get_current_org()
+    org = get_current_org()
 
-    total = assets.count_documents({
-        "org_id": org_id
-    })
+    query = {"org_id": org["org_id"]}
+
+    total = assets.count_documents(query)
 
     critical_actions = assets.count_documents({
-        "org_id": org_id,
+        **query,
         "exposure_level": "Critical"
     })
 
     avg_risk_cursor = assets.aggregate([
-        {"$match": {"org_id": org_id}},
+        {"$match": query},
         {"$group": {"_id": None, "avg": {"$avg": "$risk_score"}}}
     ])
-
-    avg_risk_result = list(avg_risk_cursor)
-    avg_risk = avg_risk_result[0]["avg"] if avg_risk_result else 0
+    avg_risk = list(avg_risk_cursor)[0]["avg"] if total > 0 else 0
 
     compliant = assets.count_documents({
-        "org_id": org_id,
+        **query,
         "compliance_status": "Compliant"
     })
 
@@ -46,14 +44,14 @@ async def get_asset_summary():
 
 
 # -----------------------------
-# 2️⃣ ASSET DISTRIBUTION (Charts)
+# 2️⃣ ASSET DISTRIBUTION
 # -----------------------------
 @router.get("/distribution")
 async def get_asset_distribution():
-    org_id = get_current_org()
+    org = get_current_org()
 
     pipeline = [
-        {"$match": {"org_id": org_id}},
+        {"$match": {"org_id": org["org_id"]}},
         {
             "$group": {
                 "_id": "$asset_type",
@@ -73,14 +71,14 @@ async def get_asset_distribution():
 
 
 # -----------------------------
-# 3️⃣ TOP RISK ASSETS (CISO Focus)
+# 3️⃣ TOP RISK ASSETS
 # -----------------------------
 @router.get("/top-risk")
 async def get_top_risk_assets():
-    org_id = get_current_org()
+    org = get_current_org()
 
     cursor = assets.find(
-        {"org_id": org_id},
+        {"org_id": org["org_id"]},
         {
             "_id": 0,
             "asset_name": 1,
@@ -96,17 +94,15 @@ async def get_top_risk_assets():
 
 
 # -----------------------------
-# 4️⃣ ASSET INVENTORY (Table)
+# 4️⃣ ASSET INVENTORY
 # -----------------------------
 @router.get("")
 async def get_asset_inventory():
-    org_id = get_current_org()
+    org = get_current_org()
 
     cursor = assets.find(
-        {"org_id": org_id},
+        {"org_id": org["org_id"]},
         {"_id": 0}
     )
 
-    return {
-        "assets": list(cursor)
-    }
+    return {"assets": list(cursor)}

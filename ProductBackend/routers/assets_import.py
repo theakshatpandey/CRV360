@@ -1,9 +1,10 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
-import csv, io
-from database import db
+import csv, io, uuid
 from datetime import datetime
+
+from database import db
 from services.risk_engine import calculate_risk
-import uuid
+from core.org_context import get_current_org
 
 router = APIRouter(prefix="/api/assets", tags=["Assets"])
 
@@ -17,6 +18,8 @@ async def import_assets(file: UploadFile = File(...)):
     if not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only CSV files allowed")
 
+    org = get_current_org()
+
     # -----------------------------
     # 1️⃣ Create ingestion job
     # -----------------------------
@@ -24,8 +27,8 @@ async def import_assets(file: UploadFile = File(...)):
 
     job = {
         "job_id": job_id,
-        "org_id": "org_demo",  # later from auth
-        "uploaded_by": "admin@company.com",  # later from auth
+        "org_id": org["org_id"],
+        "uploaded_by": org["user_email"],
         "source": "csv",
         "filename": file.filename,
         "status": "processing",
@@ -66,7 +69,7 @@ async def import_assets(file: UploadFile = File(...)):
         if not all(row.get(f) for f in required_fields):
             rows_col.insert_one({
                 "job_id": job_id,
-                "org_id": "org_demo",
+                "org_id": org["org_id"],
                 "row_number": row_number,
                 "row_data": row,
                 "status": "rejected",
@@ -77,7 +80,7 @@ async def import_assets(file: UploadFile = File(...)):
             continue
 
         asset = {
-            "org_id": "org_demo",
+            "org_id": org["org_id"],
             "asset_name": row["asset_name"],
             "asset_type": row["asset_type"],
             "ip_address": row.get("ip_address"),
@@ -107,7 +110,7 @@ async def import_assets(file: UploadFile = File(...)):
     # 5️⃣ Finalize job
     # -----------------------------
     jobs_col.update_one(
-        {"job_id": job_id},
+        {"job_id": job_id, "org_id": org["org_id"]},
         {
             "$set": {
                 "status": "completed",
@@ -127,13 +130,14 @@ async def import_assets(file: UploadFile = File(...)):
         "rejected": rejected
     }
 
+
 @router.post("/retry/{job_id}")
 async def retry_rejected_rows(job_id: str):
-    rows_col = db["asset_ingestion_rows"]
-    assets_col = db["assets"]
+    org = get_current_org()
 
     rejected_rows = rows_col.find({
         "job_id": job_id,
+        "org_id": org["org_id"],
         "status": "rejected"
     })
 
@@ -154,7 +158,7 @@ async def retry_rejected_rows(job_id: str):
             continue
 
         asset = {
-            "org_id": row["org_id"],
+            "org_id": org["org_id"],
             "asset_name": data["asset_name"],
             "asset_type": data["asset_type"],
             "ip_address": data.get("ip_address"),
@@ -178,7 +182,12 @@ async def retry_rejected_rows(job_id: str):
 
         rows_col.update_one(
             {"_id": row["_id"]},
-            {"$set": {"status": "recovered", "recovered_at": datetime.utcnow()}}
+            {
+                "$set": {
+                    "status": "recovered",
+                    "recovered_at": datetime.utcnow()
+                }
+            }
         )
 
         retried += 1
@@ -187,4 +196,3 @@ async def retry_rejected_rows(job_id: str):
         "job_id": job_id,
         "retried": retried
     }
-
