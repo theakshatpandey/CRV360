@@ -6,35 +6,17 @@ router = APIRouter(prefix="/api/assets", tags=["Assets"])
 
 assets = db["assets"]
 
-# -----------------------------
-# 1️⃣ ASSET SUMMARY
-# -----------------------------
 @router.get("/summary")
 async def get_asset_summary():
-    org = get_current_org()
-
-    query = {"org_id": org["org_id"]}
-
-    total = assets.count_documents(query)
-
-    critical_actions = assets.count_documents({
-        **query,
-        "exposure_level": "Critical"
-    })
+    total = assets.count_documents({})
+    critical_actions = assets.count_documents({"exposure_level": "Critical"})
 
     avg_risk_cursor = assets.aggregate([
-        {"$match": query},
         {"$group": {"_id": None, "avg": {"$avg": "$risk_score"}}}
     ])
-    # Handle case where list is empty
-    avg_risk_list = list(avg_risk_cursor)
-    avg_risk = avg_risk_list[0]["avg"] if len(avg_risk_list) > 0 else 0
+    avg_risk = list(avg_risk_cursor)[0]["avg"] if total > 0 else 0
 
-    compliant = assets.count_documents({
-        **query,
-        "compliance_status": "Compliant"
-    })
-
+    compliant = assets.count_documents({"compliance_status": "Compliant"})
     compliance_rate = round((compliant / total) * 100, 1) if total > 0 else 0
 
     return {
