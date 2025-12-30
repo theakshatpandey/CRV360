@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Loader2, X } from 'lucide-react';
+// These skeletons might need to be adjusted based on your actual file structure
 import { CardGridSkeleton } from "../skeletons/CardGridSkeleton";
 import { TableSkeleton } from "../skeletons/TableSkeleton";
 import { ChartSkeleton } from "../skeletons/ChartSkeleton";
+import { AssetDependencyDrawer } from "../assets/AssetDependencyDrawer";
 
 import {
   Shield,
@@ -21,7 +23,9 @@ import {
   AlertTriangle,
   Building,
   Upload,
-  FileWarning
+  FileWarning,
+  RefreshCw,
+  FileText
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 
@@ -33,7 +37,6 @@ const useAuth = () => ({ user: { name: 'Demo User', role: 'Admin' } });
 const Card = ({ className, children }: any) => <div className={`rounded-lg border bg-card text-card-foreground shadow-sm ${className || ''}`}>{children}</div>;
 const CardHeader = ({ className, children }: any) => <div className={`flex flex-col space-y-1.5 p-6 ${className || ''}`}>{children}</div>;
 const CardTitle = ({ className, children }: any) => <h3 className={`text-2xl font-semibold leading-none tracking-tight ${className || ''}`}>{children}</h3>;
-// FIX: Changed closing tag from </div> to </p>
 const CardDescription = ({ className, children }: any) => <p className={`text-sm text-muted-foreground ${className || ''}`}>{children}</p>;
 const CardContent = ({ className, children }: any) => <div className={`p-6 pt-0 ${className || ''}`}>{children}</div>;
 
@@ -173,7 +176,24 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'executive' | 'analyst'>('executive');
+
+  // Drawer State
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+
+  // Dialog States
   const [isAddAssetDialogOpen, setIsAddAssetDialogOpen] = useState(false);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isJobDetailsOpen, setIsJobDetailsOpen] = useState(false);
+
+  // Upload States
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  // Job History States
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [selectedJob, setSelectedJob] = useState<any | null>(null);
+  const [rejectedRows, setRejectedRows] = useState<any[]>([]);
+  const [loadingJobs, setLoadingJobs] = useState(false);
 
   // API data states
   const [summary, setSummary] = useState<AssetSummary | null>(null);
@@ -193,14 +213,28 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
     owner: ''
   });
 
-  // Fetch all data
-  const fetchData = async () => {
+  // --- FETCHERS ---
+
+  const fetchJobs = async () => {
+    try {
+      setLoadingJobs(true);
+      const res = await fetch(`${API_BASE}/api/assets/jobs`);
+      const data = await res.json();
+      // Handle response structure { jobs: [...] } or [...]
+      setJobs(data.jobs || data);
+    } catch {
+      toast.error("Failed to load ingestion jobs");
+    } finally {
+      setLoadingJobs(false);
+    }
+  };
+
+  const fetchAssetsData = async () => {
     setLoading(true);
     try {
       const fetchWithFallback = async (url: string) => {
         try {
           const res = await fetch(`${API_BASE}${url}`);
-
           if (!res.ok) throw new Error('Not OK');
           return await res.json();
         } catch (e) {
@@ -218,13 +252,12 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
 
       if (summaryRes) setSummary(summaryRes);
 
-      // FIX: Transform backend data (name/value) to frontend format (category/total/percentage)
       if (categoriesRes && Array.isArray(categoriesRes)) {
         const adaptedCategories = categoriesRes.map((item: any) => ({
           category: item.name || "Unknown",
           total: item.value || 0,
-          compliant: 0, // Default value to prevent crash
-          percentage: 0 // Default value to prevent crash
+          compliant: 0,
+          percentage: 0
         }));
         setCategories(adaptedCategories);
       }
@@ -241,26 +274,117 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
   };
 
   useEffect(() => {
-    fetchData();
+    fetchAssetsData();
+    fetchJobs();
   }, []);
 
-  // Fallback data
-  const fallbackSummary = {
-    total_assets: 0,
-    critical_actions: 0,
-    avg_risk_score: 0,
-    compliance_rate: 0
+  // --- HANDLERS ---
+
+  const openJob = async (job: any) => {
+    setSelectedJob(job);
+    setIsJobDetailsOpen(true);
+    setRejectedRows([]); // Clear previous
+
+    try {
+      // Fetch rejected rows
+      const res = await fetch(`${API_BASE}/api/assets/jobs/${job.job_id}/rejected`);
+      const data = await res.json();
+      setRejectedRows(data.rejected_rows || data);
+    } catch {
+      toast.error("Failed to load rejected rows");
+    }
   };
 
-  const fallbackCategories: AssetCategory[] = [];
-  const fallbackTopRisks: TopRiskAsset[] = [];
-  const fallbackAssets: Asset[] = [];
+  const retryJob = async () => {
+    if (!selectedJob) return;
+    try {
+      await fetch(`${API_BASE}/api/assets/retry/${selectedJob.job_id}`, {
+        method: "POST",
+      });
+      toast.success("Retry initiated successfully");
+      setIsJobDetailsOpen(false);
+      fetchJobs(); // Refresh job list to see status change
+      fetchAssetsData(); // Refresh assets to see if new ones appeared
+    } catch {
+      toast.error("Retry failed");
+    }
+  };
 
-  // Use real or fallback
-  const currentSummary = summary || fallbackSummary;
-  const currentCategories = categories; // Using empty array if no data, to avoid rendering issues
-  const currentTopRisks = topRisks.length > 0 ? topRisks : fallbackTopRisks;
-  const currentAssets = assets.length > 0 ? assets : fallbackAssets;
+  const handleAddAsset = async () => {
+    if (!newAsset.hostname || !newAsset.ip_address) {
+      toast.error('Please fill required fields');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/assets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newAsset),
+      });
+
+      if (response.ok) {
+        toast.success(`Asset "${newAsset.hostname}" added successfully!`);
+        setIsAddAssetDialogOpen(false);
+        setNewAsset({
+          hostname: '',
+          ip_address: '',
+          asset_type: 'Server',
+          criticality: 'Medium',
+          business_unit: '',
+          owner: ''
+        });
+        fetchAssetsData();
+      } else {
+        const errData = await response.json();
+        toast.error(`Error adding asset: ${errData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error("Error creating asset:", error);
+      toast.error("Failed to connect to backend");
+    }
+  };
+
+  const handleUploadAssets = async () => {
+    if (!uploadFile) {
+      toast.error("Please select a CSV file");
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      const formData = new FormData();
+      formData.append("file", uploadFile);
+
+      const res = await fetch(`${API_BASE}/api/assets/import`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Upload failed");
+      }
+
+      const data = await res.json();
+
+      toast.success(
+        `Upload successful: ${data.inserted} assets added, ${data.rejected} rejected`
+      );
+
+      setIsUploadOpen(false);
+      setUploadFile(null);
+      fetchAssetsData();
+      fetchJobs(); // Refresh jobs list to show new upload
+    } catch (err: any) {
+      toast.error(err.message || "Failed to upload assets");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // --- HELPERS ---
 
   const getExposureColor = (level: string) => {
     switch (String(level)) {
@@ -288,45 +412,22 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
     return 'text-green-600';
   };
 
-  const handleAddAsset = async () => {
-    if (!newAsset.hostname || !newAsset.ip_address) {
-      toast.error('Please fill required fields');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_BASE}/api/assets`, {
-
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newAsset),
-      });
-
-      if (response.ok) {
-        toast.success(`Asset "${newAsset.hostname}" added successfully!`);
-        setIsAddAssetDialogOpen(false);
-        setNewAsset({
-          hostname: '',
-          ip_address: '',
-          asset_type: 'Server',
-          criticality: 'Medium',
-          business_unit: '',
-          owner: ''
-        });
-        fetchData();
-      } else {
-        const errData = await response.json();
-        toast.error(`Error adding asset: ${errData.error || 'Unknown error'}`);
-      }
-    } catch (error) {
-      console.error("Error creating asset:", error);
-      toast.error("Failed to connect to backend");
-    }
+  // Fallback data
+  const fallbackSummary = {
+    total_assets: 0,
+    critical_actions: 0,
+    avg_risk_score: 0,
+    compliance_rate: 0
   };
 
-  const handleImportCSV = () => {
-    toast.success('CSV import started. Processing assets...');
-  };
+  const fallbackCategories: AssetCategory[] = [];
+  const fallbackTopRisks: TopRiskAsset[] = [];
+  const fallbackAssets: Asset[] = [];
+
+  const currentSummary = summary || fallbackSummary;
+  const currentCategories = categories;
+  const currentTopRisks = topRisks.length > 0 ? topRisks : fallbackTopRisks;
+  const currentAssets = assets.length > 0 ? assets : fallbackAssets;
 
   const filteredAssets = currentAssets.filter(asset => {
     const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -579,6 +680,76 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
         </CardContent>
       </Card>
 
+      {/* ASSET INGESTION JOBS CARD */}
+      <Card className="shadow-lg">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Asset Ingestion Jobs</CardTitle>
+              <CardDescription>CSV upload history and ingestion status</CardDescription>
+            </div>
+            <Button variant="ghost" size="sm" onClick={fetchJobs}>
+              <RefreshCw className={`h-4 w-4 ${loadingJobs ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingJobs ? (
+            <div className="flex justify-center p-4">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="p-4 text-left font-medium">Job ID</th>
+                    <th className="p-4 text-left font-medium">Filename</th>
+                    <th className="p-4 text-left font-medium">Status</th>
+                    <th className="p-4 text-left font-medium">Inserted</th>
+                    <th className="p-4 text-left font-medium">Rejected</th>
+                    <th className="p-4 text-left font-medium">Started</th>
+                    <th className="p-4 text-left font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {jobs.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-4 text-center text-muted-foreground">No ingestion jobs found.</td>
+                    </tr>
+                  ) : (
+                    jobs.map(job => (
+                      <tr key={job.job_id} className="border-b hover:bg-muted/50 transition-colors">
+                        <td className="p-4 font-mono text-xs">{job.job_id}</td>
+                        <td className="p-4 flex items-center">
+                          <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
+                          {job.filename}
+                        </td>
+                        <td className="p-4">
+                          <Badge variant={job.status === "completed" ? "secondary" : "outline"}>
+                            {job.status}
+                          </Badge>
+                        </td>
+                        <td className="p-4">{job.inserted}</td>
+                        <td className={`p-4 ${job.rejected > 0 ? "text-red-600 font-bold" : ""}`}>
+                          {job.rejected}
+                        </td>
+                        <td className="p-4 text-muted-foreground text-xs">{new Date(job.started_at).toLocaleString()}</td>
+                        <td className="p-4">
+                          <Button size="sm" variant="ghost" onClick={() => openJob(job)}>
+                            View
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -609,6 +780,7 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
                 Add Asset
               </Button>
 
+              {/* Add Asset Modal */}
               <SimpleModal
                 isOpen={isAddAssetDialogOpen}
                 onClose={() => setIsAddAssetDialogOpen(false)}
@@ -674,10 +846,114 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
                 </div>
               </SimpleModal>
 
-              <Button variant="outline" onClick={handleImportCSV}>
+              <Button variant="outline" onClick={() => setIsUploadOpen(true)}>
                 <Upload className="h-4 w-4 mr-2" />
-                Import CSV
+                Upload Assets
               </Button>
+
+              {/* Upload Modal */}
+              <SimpleModal
+                isOpen={isUploadOpen}
+                onClose={() => setIsUploadOpen(false)}
+                title="Upload Assets (CSV)"
+                description="Upload organizational assets using the approved CSV template"
+              >
+                <div className="space-y-4">
+                  <div>
+                    <Label>CSV File</Label>
+                    <Input
+                      type="file"
+                      accept=".csv"
+                      onChange={(e: any) => setUploadFile(e.target.files?.[0] || null)}
+                    />
+                  </div>
+
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsUploadOpen(false)}
+                      disabled={uploading}
+                    >
+                      Cancel
+                    </Button>
+
+                    <Button onClick={handleUploadAssets} disabled={uploading}>
+                      {uploading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        "Upload"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </SimpleModal>
+
+              {/* Job Details Modal */}
+              <SimpleModal
+                isOpen={isJobDetailsOpen}
+                onClose={() => setIsJobDetailsOpen(false)}
+                title={selectedJob ? `Job Details: ${selectedJob.job_id}` : "Job Details"}
+                description="Review rejected rows and status"
+              >
+                {selectedJob && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-semibold">Filename:</span> {selectedJob.filename}
+                      </div>
+                      <div>
+                        <span className="font-semibold">Status:</span> {selectedJob.status}
+                      </div>
+                      <div>
+                        <span className="font-semibold">Inserted:</span> {selectedJob.inserted}
+                      </div>
+                      <div>
+                        <span className="font-semibold">Rejected:</span> {selectedJob.rejected}
+                      </div>
+                    </div>
+
+                    <div className="border rounded-md overflow-hidden max-h-60 overflow-y-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted">
+                          <tr>
+                            <th className="p-2 text-left">Row</th>
+                            <th className="p-2 text-left">Data</th>
+                            <th className="p-2 text-left">Error</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rejectedRows.length === 0 ? (
+                            <tr>
+                              <td colSpan={3} className="p-4 text-center text-muted-foreground">No rejected rows found.</td>
+                            </tr>
+                          ) : (
+                            rejectedRows.map((row: any, i: number) => (
+                              <tr key={i} className="border-t">
+                                <td className="p-2">{row.row_number}</td>
+                                <td className="p-2 font-mono text-xs max-w-[200px] truncate" title={JSON.stringify(row.row_data)}>
+                                  {JSON.stringify(row.row_data)}
+                                </td>
+                                <td className="p-2 text-red-600 text-xs">{row.reason}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="flex justify-end space-x-2">
+                      <Button variant="outline" onClick={() => setIsJobDetailsOpen(false)}>Close</Button>
+                      <Button onClick={retryJob} disabled={rejectedRows.length === 0}>
+                        Retry Rejected Rows
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </SimpleModal>
+
             </div>
           </div>
 
@@ -794,7 +1070,7 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
                       </>
                     )}
                     <TableCell>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedAssetId(asset.id)}>
                         <Eye className="h-4 w-4 mr-1" />
                         View
                       </Button>
@@ -810,6 +1086,14 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
           </div>
         </CardContent>
       </Card>
+
+      {/* RENDER ASSET DEPENDENCY DRAWER */}
+      {selectedAssetId && (
+        <AssetDependencyDrawer
+          assetId={selectedAssetId}
+          onClose={() => setSelectedAssetId(null)}
+        />
+      )}
     </div>
   );
 }
