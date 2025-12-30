@@ -2,13 +2,16 @@ from fastapi import FastAPI, HTTPException, Request, Body, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from bson import ObjectId
 from datetime import datetime
+import os
+
+# --- ROUTER IMPORTS ---
 from routers import assets_import
 from routers.assets_jobs import router as asset_jobs_router
 from routers import asset_relationships
-import os
+from routers import auth, metrics, risk, compliance, events, phishing, phishing_simulation, incident_response, executive_report, settings
 
 # --- 1. SETUP & DATABASE ---
-# IMPORT DATABASE FROM THE SEPARATE FILE TO FIX THE MODULE ERROR
+# Import database from the separate file to fix circular import/module errors
 from database import db, assets_collection, vulnerabilities_collection, alerts_collection
 
 app = FastAPI(title="CRV360 Unified Backend")
@@ -16,9 +19,11 @@ app = FastAPI(title="CRV360 Unified Backend")
 # CORS (Allows your React Frontend to talk to this Backend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://crv360-frontend.vercel.app",
-                   "http://localhost:3000",
-                "http://localhost:5173"],  # Allows all origins
+    allow_origins=[
+        "https://crv360-frontend.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5173"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -202,12 +207,9 @@ def get_network_summary():
 
 # --- 6. EXISTING ROUTERS ---
 
-from routers import auth, metrics, risk, compliance, events, phishing, phishing_simulation, incident_response, executive_report, settings
-
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(metrics.router, prefix="/api", tags=["metrics"])
-# app.include_router(assets.router, prefix="/api", tags=["assets"])          <-- USING LOCAL LOGIC ABOVE
-# app.include_router(vulnerabilities.router, prefix="/api", tags=["vulnerabilities"]) <-- USING LOCAL LOGIC ABOVE
+# Note: Assets and Vulnerabilities are now handled by local routes above
 app.include_router(risk.router, prefix="/api", tags=["risk"])
 app.include_router(compliance.router, prefix="/api/compliance", tags=["compliance"])
 app.include_router(events.router, prefix="/api", tags=["events"])
@@ -216,6 +218,8 @@ app.include_router(phishing_simulation.router, prefix="/api", tags=["phishing-si
 app.include_router(incident_response.router, prefix="/api", tags=["incident-response"])
 app.include_router(executive_report.router, prefix="/api", tags=["executive-report"])
 app.include_router(settings.router, prefix="/api", tags=["settings"])
+
+# --- 7. NEW IMPORT & RELATIONSHIP ROUTERS ---
 app.include_router(assets_import.router)
 app.include_router(asset_jobs_router)
 app.include_router(asset_relationships.router)
