@@ -26,7 +26,9 @@ async def get_asset_summary():
         {"$match": query},
         {"$group": {"_id": None, "avg": {"$avg": "$risk_score"}}}
     ])
-    avg_risk = list(avg_risk_cursor)[0]["avg"] if total > 0 else 0
+    # Handle case where list is empty
+    avg_risk_list = list(avg_risk_cursor)
+    avg_risk = avg_risk_list[0]["avg"] if len(avg_risk_list) > 0 else 0
 
     compliant = assets.count_documents({
         **query,
@@ -96,7 +98,7 @@ async def get_top_risk_assets():
 # -----------------------------
 # 4️⃣ ASSET INVENTORY
 # -----------------------------
-@router.get("")
+@router.get("/")
 async def get_asset_inventory():
     org = get_current_org()
 

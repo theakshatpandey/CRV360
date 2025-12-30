@@ -4,6 +4,7 @@ from bson import ObjectId
 from datetime import datetime
 from routers import assets_import
 from routers.assets_jobs import router as asset_jobs_router
+from routers import asset_relationships
 import os
 
 # --- 1. SETUP & DATABASE ---
@@ -217,6 +218,7 @@ app.include_router(executive_report.router, prefix="/api", tags=["executive-repo
 app.include_router(settings.router, prefix="/api", tags=["settings"])
 app.include_router(assets_import.router)
 app.include_router(asset_jobs_router)
+app.include_router(asset_relationships.router)
 
 @app.get("/")
 def home():
