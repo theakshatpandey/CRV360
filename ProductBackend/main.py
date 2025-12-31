@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Routers
+# ✅ CORRECT IMPORT STYLE
 from routers.assets import router as assets_router
 from routers.assets_import import router as assets_import_router
 from routers.assets_jobs import router as assets_jobs_router
@@ -19,20 +19,16 @@ from routers.vulnerabilities import router as vulnerabilities_router
 from routers.settings import router as settings_router
 from routers.auth import router as auth_router
 
-app = FastAPI(
-    title="CRV360 Backend",
-    version="1.0.0"
-)
+app = FastAPI(title="CRV360 Backend", version="1.0.0")
 
 # -----------------------------
-# CORS (VERY IMPORTANT)
+# CORS (MANDATORY)
 # -----------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://crv360dsecure.vercel.app",
+        "https://crv360dsecure.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -40,7 +36,7 @@ app.add_middleware(
 )
 
 # -----------------------------
-# ROUTER REGISTRATION (🔥 FIX)
+# ROUTERS (ORDER MATTERS)
 # -----------------------------
 app.include_router(auth_router)
 
@@ -61,11 +57,8 @@ app.include_router(vulnerabilities_router)
 app.include_router(settings_router)
 
 # -----------------------------
-# Health check (for Cloud Run)
+# HEALTH CHECK
 # -----------------------------
 @app.get("/")
 def health():
-    return {
-        "status": "ok",
-        "service": "CRV360 Backend",
-    }
+    return {"status": "ok"}
