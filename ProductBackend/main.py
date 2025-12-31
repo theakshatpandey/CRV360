@@ -51,3 +51,14 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+
+# ---- TEMP DEBUG ROUTE ----
+@app.get("/__routes")
+async def list_routes():
+    return [
+        {
+            "path": route.path,
+            "methods": list(route.methods)
+        }
+        for route in app.router.routes
+    ]
