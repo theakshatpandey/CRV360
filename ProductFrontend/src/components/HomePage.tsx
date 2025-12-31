@@ -141,27 +141,33 @@ export function HomePage({ onModuleChange }: HomePageProps = {}) {
           risksRes
         ] = await Promise.all([
           fetch(`${API_BASE}/api/metrics/key`).then(r => r.json()),
-          fetch(`${API_BASE}/api/metrics/operational`).then(r => r.json()),
-          fetch(`${API_BASE}/api/metrics/trends/5days`).then(r => r.json()),
+
+          // ✅ DISABLED UNTIL METRICS MODULE IS READY (Using Promise.resolve to keep array index correct)
+          // fetch(`${API_BASE}/api/metrics/operational`).then(r => r.json()),
+          Promise.resolve({}),
+
+          // ✅ DISABLED UNTIL METRICS MODULE IS READY
+          // fetch(`${API_BASE}/api/metrics/trends/5days`).then(r => r.json()),
+          Promise.resolve({}),
+
           fetch(`${API_BASE}/api/calendar/upcoming`).then(r => r.json()),
           fetch(`${API_BASE}/api/metrics/module-health`).then(r => r.json()),
           fetch(`${API_BASE}/api/metrics/alerts/today`).then(r => r.json()),
           fetch(`${API_BASE}/api/risks/top`).then(r => r.json())
-
         ]);
 
         setKeyMetrics(metricsRes);
         setOperationalIndicators(indicatorsRes);
-        setTrends(trendsRes.trends || []);
-        setCalendarEvents(calendarRes.events || []);
-        setModuleHealth(moduleHealthRes.modules || []);
+        setTrends(trendsRes?.trends || []);
+        setCalendarEvents(calendarRes?.events || []);
+        setModuleHealth(moduleHealthRes?.modules || []);
         setAlertsBySeverity([
-          { name: 'Critical', value: alertsRes.critical || 12, color: '#ef4444' },
-          { name: 'High', value: alertsRes.high || 34, color: '#f97316' },
-          { name: 'Medium', value: alertsRes.medium || 67, color: '#eab308' },
-          { name: 'Low', value: alertsRes.low || 43, color: '#22c55e' }
+          { name: 'Critical', value: alertsRes?.critical || 12, color: '#ef4444' },
+          { name: 'High', value: alertsRes?.high || 34, color: '#f97316' },
+          { name: 'Medium', value: alertsRes?.medium || 67, color: '#eab308' },
+          { name: 'Low', value: alertsRes?.low || 43, color: '#22c55e' }
         ]);
-        setTopRisks(risksRes.risks || []);
+        setTopRisks(risksRes?.risks || []);
       } catch (err) {
         console.error('Failed to fetch home data:', err);
         setError('Failed to load some dashboard data');
@@ -279,18 +285,6 @@ export function HomePage({ onModuleChange }: HomePageProps = {}) {
     }
   };
 
-  const moduleIdMap: Record<string, string> = {
-    'Asset & Network Management': 'assets',
-    'Vulnerability & Threat Intel': 'vulnerabilities',
-    'Risk Exposure Dashboard': 'risk',
-    'Policy & Compliance Tracker': 'compliance',
-    'Events & Alert Monitoring': 'events',
-    'Incident Response Lite': 'incident-response',
-    'Phishing Intelligence': 'phishing',
-    'Phishing Simulation': 'phishing-simulation',
-    'Executive Report': 'executive-report'
-  };
-
   return (
     <div className="space-y-6">
       {/* STRATEGIC HEADER */}
@@ -357,7 +351,7 @@ export function HomePage({ onModuleChange }: HomePageProps = {}) {
                     <span className="text-muted-foreground">Target: {metrics.mttd.target}h</span>
                     <span className="font-semibold text-green-600">{metrics.mttd.status}</span>
                   </div>
-                  <Progress value={(metrics.mttd.target - metrics.mttd.value) / metrics.mttd.target * 100} className="h-2 bg-emerald-200" />
+                  <Progress value={(metrics.mttd.target! - metrics.mttd.value) / metrics.mttd.target! * 100} className="h-2 bg-emerald-200" />
                 </div>
               </>
             )}
@@ -385,7 +379,7 @@ export function HomePage({ onModuleChange }: HomePageProps = {}) {
                     <span className="text-muted-foreground">Target: {metrics.mttr.target}h</span>
                     <span className="font-semibold text-green-600">{metrics.mttr.status}</span>
                   </div>
-                  <Progress value={(metrics.mttr.target - metrics.mttr.value) / metrics.mttr.target * 100} className="h-2 bg-blue-200" />
+                  <Progress value={(metrics.mttr.target! - metrics.mttr.value) / metrics.mttr.target! * 100} className="h-2 bg-blue-200" />
                 </div>
               </>
             )}
@@ -414,7 +408,7 @@ export function HomePage({ onModuleChange }: HomePageProps = {}) {
                     <span className="text-muted-foreground">Target: {metrics.security_roi.target}%</span>
                     <span className="font-semibold text-green-600">{metrics.security_roi.status}</span>
                   </div>
-                  <Progress value={(metrics.security_roi.value / metrics.security_roi.target) * 100} className="h-2 bg-purple-200" />
+                  <Progress value={(metrics.security_roi.value / metrics.security_roi.target!) * 100} className="h-2 bg-purple-200" />
                 </div>
               </>
             )}
