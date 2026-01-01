@@ -444,13 +444,20 @@ export function AssetManagementModule({ onModuleChange }: AssetManagementModuleP
   const currentTopRisks = topRisks.length > 0 ? topRisks : fallbackTopRisks;
   const currentAssets = assets.length > 0 ? assets : fallbackAssets;
 
+  // ✅ SAFE REPLACEMENT
   const filteredAssets = currentAssets.filter(asset => {
-    const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (asset.business_unit && asset.business_unit.toLowerCase().includes(searchTerm.toLowerCase()));
+    const term = searchTerm.toLowerCase();
+
+    // Check name OR hostname (safely), plus IP and Business Unit
+    const matchesSearch =
+      (asset.name || asset.hostname || '').toLowerCase().includes(term) ||
+      (asset.ip_address || '').toLowerCase().includes(term) ||
+      (asset.business_unit || '').toLowerCase().includes(term);
+
     const matchesType = typeFilter === 'all' || asset.type === typeFilter;
+
     return matchesSearch && matchesType;
   });
-
   return (
     <div className="space-y-6">
       {currentSummary.critical_actions > 0 && (
