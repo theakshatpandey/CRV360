@@ -1,15 +1,5 @@
-from fastapi import APIRouter, HTTPException, Query
-from pymongo import MongoClient
-from datetime import datetime, timedelta
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# Connect to MongoDB
-MONGO_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
-client = MongoClient(MONGO_URI)
-db = client["product"]
+from fastapi import APIRouter, HTTPException
+from database import db  # ✅ centralized import
 
 # Create Router
 router = APIRouter(prefix="/phishing", tags=["phishing"])
@@ -20,12 +10,6 @@ router = APIRouter(prefix="/phishing", tags=["phishing"])
 
 @router.get("/intelligence")
 async def get_phishing_intelligence():
-    """
-    GET /api/phishing/intelligence
-    
-    Fetches all active phishing campaigns for the dashboard.
-    Returns a list of threat intelligence objects.
-    """
     try:
         # Fetch all records, sorted by detection time (newest first)
         campaigns = list(db["phishing_intelligence"].find({}, {"_id": 0}).sort("detected_at", -1))
@@ -40,12 +24,6 @@ async def get_phishing_intelligence():
 
 @router.get("/intelligence/stats")
 async def get_phishing_stats():
-    """
-    GET /api/phishing/intelligence/stats
-    
-    Returns aggregated statistics for the dashboard cards.
-    (e.g., Total Attempts, Click Rate, Spoof Domains)
-    """
     try:
         campaigns = list(db["phishing_intelligence"].find({}, {"_id": 0}))
         
@@ -68,12 +46,6 @@ async def get_phishing_stats():
 
 @router.post("/intelligence/{threat_id}/block-domain")
 async def block_phishing_domain(threat_id: str):
-    """
-    POST /api/phishing/intelligence/{threat_id}/block-domain
-    
-    Simulates blocking a malicious domain on the email gateway/firewall.
-    Updates the 'remediation_status.domain_takedown' field.
-    """
     try:
         result = db["phishing_intelligence"].update_one(
             {"threat_id": threat_id},

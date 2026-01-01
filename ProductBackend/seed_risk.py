@@ -1,8 +1,4 @@
-from pymongo import MongoClient
-
-# Connect to MongoDB
-client = MongoClient("mongodb://localhost:27017/")
-db = client["security_db"]
+from database import db  # ✅ Centralized import
 
 # Clear existing data (optional, for clean seeding)
 db.risk_summary.drop()

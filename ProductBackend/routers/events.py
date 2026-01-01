@@ -1,14 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
-from pymongo import MongoClient
 from datetime import datetime
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-MONGO_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
-client = MongoClient(MONGO_URI)
-db = client["product"]
+from database import db  # ✅ centralized import
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -18,11 +10,6 @@ router = APIRouter(prefix="/events", tags=["events"])
 
 @router.get("/campaigns")
 async def get_all_campaigns(severity: str = Query(None)):
-    """
-    GET /api/events/campaigns
-    
-    Fetches all threat campaigns with filtering by severity
-    """
     try:
         query = {}
         if severity:
@@ -37,14 +24,8 @@ async def get_all_campaigns(severity: str = Query(None)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/campaigns/{campaign_id}")
 async def get_campaign_details(campaign_id: str):
-    """
-    GET /api/events/campaigns/{campaign_id}
-    
-    Fetches detailed information about a specific campaign
-    """
     try:
         campaign = db["threat_campaigns"].find_one(
             {"campaign_id": campaign_id},
@@ -59,15 +40,8 @@ async def get_campaign_details(campaign_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.post("/campaigns/{campaign_id}/launch-response")
 async def launch_incident_response(campaign_id: str):
-    """
-    POST /api/events/campaigns/{campaign_id}/launch-response
-    
-    Launches incident response for a campaign.
-    Called when "Launch Incident Response" button is clicked.
-    """
     try:
         campaign = db["threat_campaigns"].find_one({"campaign_id": campaign_id})
         if not campaign:
@@ -97,14 +71,8 @@ async def launch_incident_response(campaign_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/campaigns/{campaign_id}/related-alerts")
 async def get_campaign_alerts(campaign_id: str):
-    """
-    GET /api/events/campaigns/{campaign_id}/related-alerts
-    
-    Fetches all alerts related to a specific campaign
-    """
     try:
         alerts = list(db["security_alerts"].find(
             {"campaign_id": campaign_id},
@@ -124,11 +92,6 @@ async def get_campaign_alerts(campaign_id: str):
 
 @router.get("/alerts")
 async def get_all_alerts(severity: str = Query(None), status: str = Query(None)):
-    """
-    GET /api/events/alerts
-    
-    Fetches all security alerts with optional filtering
-    """
     try:
         query = {}
         if severity:
@@ -145,14 +108,8 @@ async def get_all_alerts(severity: str = Query(None), status: str = Query(None))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/alerts/{alert_id}")
 async def get_alert_details(alert_id: str):
-    """
-    GET /api/events/alerts/{alert_id}
-    
-    Fetches detailed information about a specific alert
-    """
     try:
         alert = db["security_alerts"].find_one(
             {"alert_id": alert_id},
@@ -167,14 +124,8 @@ async def get_alert_details(alert_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.post("/alerts/{alert_id}/update-status")
 async def update_alert_status(alert_id: str, new_status: str):
-    """
-    POST /api/events/alerts/{alert_id}/update-status
-    
-    Updates the status of an alert
-    """
     try:
         allowed_statuses = ["Open", "In Progress", "Resolved", "Contained"]
         if new_status not in allowed_statuses:
@@ -204,11 +155,6 @@ async def update_alert_status(alert_id: str, new_status: str):
 
 @router.get("/responses")
 async def get_all_responses(campaign_id: str = Query(None)):
-    """
-    GET /api/events/responses
-    
-    Fetches all incident responses
-    """
     try:
         query = {}
         if campaign_id:
@@ -223,14 +169,8 @@ async def get_all_responses(campaign_id: str = Query(None)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/responses/{response_id}")
 async def get_response_details(response_id: str):
-    """
-    GET /api/events/responses/{response_id}
-    
-    Fetches details about a specific incident response
-    """
     try:
         response = db["incident_responses"].find_one(
             {"response_id": response_id},
@@ -251,11 +191,6 @@ async def get_response_details(response_id: str):
 
 @router.get("/metrics")
 async def get_alert_metrics():
-    """
-    GET /api/events/metrics
-    
-    Fetches latest SOC performance metrics
-    """
     try:
         metrics = db["alert_metrics"].find_one(
             {},
@@ -277,12 +212,6 @@ async def get_alert_metrics():
 
 @router.post("/campaigns/{campaign_id}/generate-executive-brief")
 async def generate_executive_brief(campaign_id: str):
-    """
-    POST /api/events/campaigns/{campaign_id}/generate-executive-brief
-    
-    Generates an executive brief for a campaign.
-    Called when "Executive Brief" button is clicked.
-    """
     try:
         campaign = db["threat_campaigns"].find_one({"campaign_id": campaign_id}, {"_id": 0})
         if not campaign:
@@ -322,15 +251,8 @@ async def generate_executive_brief(campaign_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.post("/alerts/{alert_id}/generate-report")
 async def generate_alert_report(alert_id: str):
-    """
-    POST /api/events/alerts/{alert_id}/generate-report
-    
-    Generates a detailed report for a specific alert.
-    Called when "Generate Report" button is clicked.
-    """
     try:
         alert = db["security_alerts"].find_one(
             {"alert_id": alert_id},

@@ -1,10 +1,7 @@
 from fastapi import APIRouter
-from pymongo import MongoClient
+from database import db  # ✅ centralized import
 
 router = APIRouter(prefix="/api/risk", tags=["risk"])
-
-client = MongoClient("mongodb://localhost:27017/")
-db = client["security_db"]
 
 @router.get("/summary")
 async def risk_summary():

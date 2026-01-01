@@ -1,16 +1,7 @@
-from fastapi import APIRouter, HTTPException, Query
-from pymongo import MongoClient
+from fastapi import APIRouter, HTTPException
 from datetime import datetime
 from pydantic import BaseModel
-from typing import List, Optional
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-MONGO_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
-client = MongoClient(MONGO_URI)
-db = client["product"]
+from database import db  # ✅ centralized import
 
 router = APIRouter(prefix="/phishing-simulation", tags=["phishing-simulation"])
 
@@ -29,10 +20,6 @@ class CampaignCreate(BaseModel):
 
 @router.get("/campaigns")
 async def get_simulations():
-    """
-    GET /api/phishing-simulation/campaigns
-    Fetches list of all simulation campaigns.
-    """
     try:
         simulations = list(db["phishing_simulations"].find({}, {"_id": 0}))
         return {"status": "success", "data": simulations}
@@ -41,10 +28,6 @@ async def get_simulations():
 
 @router.post("/campaigns/create")
 async def create_campaign(campaign: CampaignCreate):
-    """
-    POST /api/phishing-simulation/campaigns/create
-    Creates a new simulation campaign.
-    """
     try:
         new_campaign = {
             "campaign_id": f"SIM-{int(datetime.utcnow().timestamp())}",
@@ -65,10 +48,6 @@ async def create_campaign(campaign: CampaignCreate):
 
 @router.get("/templates")
 async def get_templates():
-    """
-    GET /api/phishing-simulation/templates
-    Fetches all phishing templates for the gallery.
-    """
     try:
         templates = list(db["phishing_templates"].find({}, {"_id": 0}))
         return {"status": "success", "data": templates}
@@ -77,10 +56,6 @@ async def get_templates():
 
 @router.get("/templates/{template_id}")
 async def get_template_preview(template_id: str):
-    """
-    GET /api/phishing-simulation/templates/{template_id}
-    Fetches details of a specific template for preview.
-    """
     try:
         template = db["phishing_templates"].find_one({"template_id": template_id}, {"_id": 0})
         if not template:

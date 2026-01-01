@@ -1,34 +1,9 @@
 from fastapi import APIRouter, HTTPException, Query
-from pymongo import MongoClient
 from datetime import datetime
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# MongoDB Connection
-MONGO_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
-client = MongoClient(MONGO_URI)
-db = client["product"]
+from database import db  # ✅ centralized import
 
 # Create router
-router = APIRouter()
-
-# ============================================
-# REQUEST & RESPONSE MODELS
-# ============================================
-
-class ComplianceFramework:
-    """Model for compliance framework data"""
-    pass
-
-class ComplianceViolation:
-    """Model for compliance violation data"""
-    pass
-
-class ComplianceAction:
-    """Model for compliance action data"""
-    pass
+router = APIRouter(prefix="/api/compliance", tags=["compliance"])
 
 # ============================================
 # COMPLIANCE FRAMEWORKS APIs
@@ -36,14 +11,6 @@ class ComplianceAction:
 
 @router.get("/frameworks")
 async def get_all_frameworks():
-    """
-    GET /api/compliance/frameworks
-    
-    Fetches all compliance frameworks (ISO, NIST, GDPR, SOX, PCI DSS)
-    
-    Returns:
-        List of frameworks with compliance scores, status, and review dates
-    """
     try:
         frameworks = list(db["compliance_frameworks"].find({}, {"_id": 0}))
         return {
@@ -54,20 +21,8 @@ async def get_all_frameworks():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/frameworks/{framework_id}")
 async def get_framework_details(framework_id: str):
-    """
-    GET /api/compliance/frameworks/{framework_id}
-    
-    Fetches detailed information about a specific framework
-    
-    Args:
-        framework_id: Framework identifier (iso27001, nist, gdpr, sox, pci)
-    
-    Returns:
-        Detailed framework data with compliance breakdown
-    """
     try:
         framework = db["compliance_frameworks"].find_one(
             {"framework_id": framework_id},
@@ -88,17 +43,6 @@ async def get_framework_details(framework_id: str):
 
 @router.get("/violations")
 async def get_all_violations(severity: str = Query(None)):
-    """
-    GET /api/compliance/violations
-    
-    Fetches all compliance violations. Can filter by severity.
-    
-    Query Parameters:
-        severity (optional): Filter by severity (Critical, High, Medium, Low)
-    
-    Returns:
-        List of violations with details and remediation steps
-    """
     try:
         query = {}
         if severity:
@@ -113,21 +57,8 @@ async def get_all_violations(severity: str = Query(None)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/violations/{violation_id}")
 async def get_violation_details(violation_id: int):
-    """
-    GET /api/compliance/violations/{violation_id}
-    
-    Fetches detailed information about a specific violation.
-    This API is called when "View Details" button is clicked.
-    
-    Args:
-        violation_id: Violation identifier
-    
-    Returns:
-        Complete violation data with remediation steps and owner info
-    """
     try:
         violation = db["compliance_violations"].find_one(
             {"violation_id": violation_id},
@@ -142,21 +73,8 @@ async def get_violation_details(violation_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.post("/violations/{violation_id}/status")
 async def update_violation_status(violation_id: int, new_status: str):
-    """
-    POST /api/compliance/violations/{violation_id}/status
-    
-    Updates the status of a violation (In Progress, Not Started, Remediated)
-    
-    Args:
-        violation_id: Violation identifier
-        new_status: New status value
-    
-    Returns:
-        Updated violation data
-    """
     try:
         allowed_statuses = ["Not Started", "In Progress", "Remediated"]
         if new_status not in allowed_statuses:
@@ -194,17 +112,6 @@ async def update_violation_status(violation_id: int, new_status: str):
 
 @router.get("/actions")
 async def get_all_actions(priority: str = Query(None)):
-    """
-    GET /api/compliance/actions
-    
-    Fetches all CISO recommended actions. Can filter by priority.
-    
-    Query Parameters:
-        priority (optional): Filter by priority (Critical, High, Medium, Low)
-    
-    Returns:
-        List of recommended actions with timeline and effort
-    """
     try:
         query = {}
         if priority:
@@ -219,22 +126,8 @@ async def get_all_actions(priority: str = Query(None)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.post("/actions/{action_id}/take-action")
 async def take_action(action_id: int, assigned_to: str = None):
-    """
-    POST /api/compliance/actions/{action_id}/take-action
-    
-    Records that a CISO recommended action has been taken.
-    This API is called when "Take Action" button is clicked.
-    
-    Args:
-        action_id: Action identifier
-        assigned_to (optional): User ID who is taking the action
-    
-    Returns:
-        Updated action data with timestamp
-    """
     try:
         result = db["compliance_actions"].update_one(
             {"action_id": action_id},
@@ -264,20 +157,8 @@ async def take_action(action_id: int, assigned_to: str = None):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.post("/actions/{action_id}/complete")
 async def complete_action(action_id: int):
-    """
-    POST /api/compliance/actions/{action_id}/complete
-    
-    Marks a compliance action as completed
-    
-    Args:
-        action_id: Action identifier
-    
-    Returns:
-        Updated action data
-    """
     try:
         result = db["compliance_actions"].update_one(
             {"action_id": action_id},
@@ -311,14 +192,6 @@ async def complete_action(action_id: int):
 
 @router.get("/evidence")
 async def get_evidence_intelligence():
-    """
-    GET /api/compliance/evidence
-    
-    Fetches evidence intelligence data (documents, screenshots, configurations)
-    
-    Returns:
-        Evidence data with coverage metrics and gap counts
-    """
     try:
         evidence = list(db["evidence_intelligence"].find({}, {"_id": 0}))
         
@@ -336,18 +209,8 @@ async def get_evidence_intelligence():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.post("/evidence/generate-gap-report")
 async def generate_gap_report():
-    """
-    POST /api/compliance/evidence/generate-gap-report
-    
-    Generates a gap report for compliance evidence.
-    This API is called when "Generate Gap Report" button is clicked.
-    
-    Returns:
-        Gap report data with identified gaps and recommendations
-    """
     try:
         # Fetch all evidence intelligence records
         evidence = list(db["evidence_intelligence"].find({}, {"_id": 0}))
@@ -387,17 +250,8 @@ async def generate_gap_report():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/evidence/gap-reports")
 async def get_gap_reports():
-    """
-    GET /api/compliance/evidence/gap-reports
-    
-    Fetches all generated gap reports
-    
-    Returns:
-        List of gap reports with details
-    """
     try:
         reports = list(db["evidence_gap_reports"].find({}, {"_id": 0}))
         return {
@@ -414,14 +268,6 @@ async def get_gap_reports():
 
 @router.get("/controls")
 async def get_all_controls():
-    """
-    GET /api/compliance/controls
-    
-    Fetches all compliance controls with maturity scores
-    
-    Returns:
-        List of controls with effectiveness and test data
-    """
     try:
         # Hardcoded controls data (can be moved to database if needed)
         controls = [
@@ -501,14 +347,6 @@ async def get_all_controls():
 
 @router.get("/executive-kpis")
 async def get_executive_kpis():
-    """
-    GET /api/compliance/executive-kpis
-    
-    Fetches executive KPI summary for compliance dashboard
-    
-    Returns:
-        Overall compliance, violations, controls, and audit readiness metrics
-    """
     try:
         # Get frameworks for overall compliance calculation
         frameworks = list(db["compliance_frameworks"].find({}, {"_id": 0}))

@@ -1,18 +1,12 @@
 # [BACKEND - PYTHON]
 # Run this script to wipe the DB and insert fresh test data.
 
-from pymongo import MongoClient
+from database import db  # ✅ Centralized import
 from datetime import datetime, timedelta
-import random
-
-# CORRECTED CONNECTION STRING (Same as your app.py)
-MONGO_URI = "mongodb://localhost:27017"
 
 def seed_database():
     try:
-        client = MongoClient(MONGO_URI)
-        db = client.crv360_db
-        print("✅ SEEDER: Connected to MongoDB.")
+        print("✅ SEEDER: Connected to MongoDB via database.py.")
 
         # 1. Clear old data
         print("🧹 Clearing old data...")

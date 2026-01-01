@@ -1,14 +1,5 @@
-from pymongo import MongoClient
+from database import db  # ✅ Centralized import
 from datetime import datetime, timedelta, timezone
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# Connect to MongoDB
-MONGO_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
-client = MongoClient(MONGO_URI)
-db = client["product"]
 
 def seed_phishing_data():
     """

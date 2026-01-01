@@ -1,26 +1,14 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from pymongo import MongoClient
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 import io
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-MONGO_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
-client = MongoClient(MONGO_URI)
-db = client["product"]
+from database import db  # ✅ centralized import
 
 router = APIRouter(prefix="/executive-report", tags=["executive-report"])
 
 @router.get("/latest")
 async def get_latest_report():
-    """
-    GET /api/executive-report/latest
-    Fetches the latest executive report data.
-    """
     try:
         report = db["executive_reports"].find_one({}, {"_id": 0}, sort=[("generated_at", -1)])
         if not report:
@@ -31,10 +19,6 @@ async def get_latest_report():
 
 @router.get("/export-pdf")
 async def export_pdf():
-    """
-    GET /api/executive-report/export-pdf
-    Generates and downloads a PDF version of the report.
-    """
     try:
         report = db["executive_reports"].find_one({}, {"_id": 0}, sort=[("generated_at", -1)])
         if not report:

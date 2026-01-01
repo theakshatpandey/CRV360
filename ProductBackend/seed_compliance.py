@@ -1,24 +1,9 @@
-from pymongo import MongoClient
-from datetime import datetime, timedelta
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# Connect to MongoDB
-MONGO_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
-client = MongoClient(MONGO_URI)
-db = client["product"]
+from database import db  # ✅ Centralized import
+from datetime import datetime
 
 def seed_compliance_data():
     """
     Seeds the compliance module with sample data.
-    
-    This function creates 4 collections:
-    1. compliance_frameworks - Framework compliance scores
-    2. compliance_violations - Compliance violations and remediation
-    3. compliance_actions - CISO recommended actions
-    4. evidence_intelligence - Documentation and evidence tracking
     """
     
     print("🔄 Starting Compliance Data Seeding...")

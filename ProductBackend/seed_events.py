@@ -1,13 +1,5 @@
-from pymongo import MongoClient
+from database import db  # ✅ Centralized import
 from datetime import datetime, timedelta, timezone
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-MONGO_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
-client = MongoClient(MONGO_URI)
-db = client["product"]
 
 def seed_events_data():
     """
@@ -23,7 +15,7 @@ def seed_events_data():
             db[collection].drop()
             print(f"   ✓ Dropped {collection}")
     
-    # Helper for current UTC time (Fixes DeprecationWarning)
+    # Helper for current UTC time
     now = datetime.now(timezone.utc)
 
     # ============================================
@@ -225,12 +217,12 @@ def seed_events_data():
     # 4. ALERT METRICS
     # ============================================
     
-    # FIX: Mongo cannot accept date() objects, so we use datetime set to midnight
+    # Mongo cannot accept date() objects, so we use datetime set to midnight
     today_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
     metrics_data = [
         {
-            "metric_date": today_midnight, # This fixed the error
+            "metric_date": today_midnight, 
             "mttr_minutes": 45,
             "mittd_minutes": 8,
             "sla_compliance": 94.5,

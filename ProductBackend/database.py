@@ -1,12 +1,13 @@
 import os
 from pymongo import MongoClient
+from pymongo.errors import ServerSelectionTimeoutError
 from dotenv import load_dotenv
 
 # -----------------------------------
 # ENV LOADING STRATEGY
 # -----------------------------------
 # Load .env ONLY for local development
-# Cloud Run will inject env vars directly
+# Cloud Run injects env vars directly
 load_dotenv(override=False)
 
 MONGO_URI = os.getenv("MONGO_URI")
@@ -19,22 +20,33 @@ if not MONGO_URI:
         "For Cloud Run, set it as an environment variable."
     )
 
-print("✅ MongoDB URI loaded")
+# -----------------------------------
+# MONGO CLIENT (SINGLETON, ATLAS-SAFE)
+# -----------------------------------
+try:
+    client = MongoClient(
+        MONGO_URI,
+        serverSelectionTimeoutMS=5000,
+        connectTimeoutMS=5000,
+        retryWrites=True,
+    )
+
+    # 🔥 Force connection check at startup
+    client.admin.command("ping")
+
+except ServerSelectionTimeoutError as e:
+    raise RuntimeError(
+        f"❌ MongoDB connection failed. "
+        f"Check Atlas availability, credentials, and IP access.\n{e}"
+    )
 
 # -----------------------------------
-# MONGO CLIENT (Atlas-safe)
+# DATABASE (EXPLICIT)
 # -----------------------------------
-client = MongoClient(
-    MONGO_URI,
-    serverSelectionTimeoutMS=5000,
-    connectTimeoutMS=5000,
-)
-
-# Explicit DB (important)
 db = client["CRV360"]
 
 # -----------------------------------
-# COLLECTION EXPORTS
+# COLLECTION EXPORTS (SINGLE SOURCE OF TRUTH)
 # -----------------------------------
 users_collection = db["users"]
 
@@ -48,3 +60,9 @@ events_collection = db["events"]
 incidents_collection = db["incidents"]
 metrics_collection = db["metrics"]
 settings_collection = db["settings"]
+
+# -----------------------------------
+# NOTE:
+# ❗ DO NOT create MongoClient anywhere else in the codebase
+# ❗ All routers MUST import collections from this file
+# -----------------------------------
