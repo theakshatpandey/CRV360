@@ -1,52 +1,44 @@
 import os
 from pymongo import MongoClient
-from pymongo.errors import ServerSelectionTimeoutError
 from dotenv import load_dotenv
 
 # -----------------------------------
-# ENV LOADING STRATEGY
+# ENV LOADING
 # -----------------------------------
-# Load .env ONLY for local development
-# Cloud Run injects env vars directly
+# Local: loads .env
+# Cloud Run: env vars injected automatically
 load_dotenv(override=False)
 
 MONGO_URI = os.getenv("MONGO_URI")
 
-# ---- HARD FAIL (NO FALLBACKS) ----
 if not MONGO_URI:
     raise RuntimeError(
-        "❌ MONGO_URI is not set. "
-        "For local dev, define it in .env. "
-        "For Cloud Run, set it as an environment variable."
+        "❌ MONGO_URI not set. "
+        "Set it in .env (local) or Cloud Run env vars."
     )
 
-# -----------------------------------
-# MONGO CLIENT (SINGLETON, ATLAS-SAFE)
-# -----------------------------------
-try:
-    client = MongoClient(
-        MONGO_URI,
-        serverSelectionTimeoutMS=5000,
-        connectTimeoutMS=5000,
-        retryWrites=True,
-    )
-
-    # 🔥 Force connection check at startup
-    client.admin.command("ping")
-
-except ServerSelectionTimeoutError as e:
-    raise RuntimeError(
-        f"❌ MongoDB connection failed. "
-        f"Check Atlas availability, credentials, and IP access.\n{e}"
-    )
+print("✅ MONGO_URI detected")
 
 # -----------------------------------
-# DATABASE (EXPLICIT)
+# MONGO CLIENT (LAZY, CLOUD-RUN SAFE)
+# -----------------------------------
+client = MongoClient(
+    MONGO_URI,
+    serverSelectionTimeoutMS=30000,  # allow slow Atlas DNS
+    connectTimeoutMS=30000,
+    retryWrites=True,
+)
+
+# ❌ DO NOT PING HERE
+# Cloud Run must start FAST
+
+# -----------------------------------
+# DATABASE
 # -----------------------------------
 db = client["CRV360"]
 
 # -----------------------------------
-# COLLECTION EXPORTS (SINGLE SOURCE OF TRUTH)
+# COLLECTION EXPORTS
 # -----------------------------------
 users_collection = db["users"]
 
@@ -60,9 +52,3 @@ events_collection = db["events"]
 incidents_collection = db["incidents"]
 metrics_collection = db["metrics"]
 settings_collection = db["settings"]
-
-# -----------------------------------
-# NOTE:
-# ❗ DO NOT create MongoClient anywhere else in the codebase
-# ❗ All routers MUST import collections from this file
-# -----------------------------------
