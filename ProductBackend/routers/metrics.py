@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from database import db  # ✅ centralized import
+from core.org_context import get_current_org
+
 
 # matches frontend calls like /api/metrics/..., /api/calendar/...
 router = APIRouter(prefix="/api", tags=["Dashboard Metrics"])

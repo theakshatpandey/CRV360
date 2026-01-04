@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query
 from datetime import datetime
 from database import db  # ✅ centralized import
+from core.org_context import get_current_org
+
 
 # Create router
 router = APIRouter(prefix="/api/compliance", tags=["compliance"])

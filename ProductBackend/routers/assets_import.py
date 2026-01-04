@@ -6,6 +6,7 @@ from database import db
 from services.risk_engine import calculate_risk
 from core.org_context import get_current_org
 
+
 router = APIRouter(prefix="/api/assets", tags=["Assets"])
 
 assets_col = db["assets"]

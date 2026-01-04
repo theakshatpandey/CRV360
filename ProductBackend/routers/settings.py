@@ -3,6 +3,8 @@ from pydantic import BaseModel
 from typing import List
 from datetime import datetime
 from database import db  # ✅ centralized import
+from core.org_context import get_current_org
+
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 

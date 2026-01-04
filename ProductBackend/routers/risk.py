@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from core.org_context import get_current_org
 from database import db  # ✅ centralized import
 
 router = APIRouter(prefix="/api/risk", tags=["risk"])

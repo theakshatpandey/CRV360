@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from database import db
+from core.org_context import get_current_org
 
 router = APIRouter(
     prefix="/api/assets/jobs",

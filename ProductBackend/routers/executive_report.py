@@ -4,6 +4,8 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 import io
 from database import db  # ✅ centralized import
+from core.org_context import get_current_org
+
 
 router = APIRouter(prefix="/executive-report", tags=["executive-report"])
 

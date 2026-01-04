@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from database import db  # ✅ centralized import
+from core.org_context import get_current_org
+
 
 # Create Router
 router = APIRouter(prefix="/phishing", tags=["phishing"])

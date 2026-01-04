@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException
 from datetime import datetime
 from pydantic import BaseModel
 from database import db  # ✅ centralized import
+from core.org_context import get_current_org
+
 
 router = APIRouter(prefix="/incident-response", tags=["incident-response"])
 
