@@ -2,22 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # -----------------------------------
-# FORCE DATABASE INITIALIZATION
-# -----------------------------------
-# IMPORTANT:
-# This ensures MongoDB connects ONCE at startup
-# and prevents localhost / multiple-client bugs
-import database  # noqa: F401
-
-
-# -----------------------------------
 # ROUTERS
 # -----------------------------------
 from routers.assets import router as assets_router
 from routers.assets_import import router as assets_import_router
 from routers.assets_jobs import router as assets_jobs_router
 from routers.asset_relationships import router as asset_relationships_router
-
 
 # -----------------------------------
 # FASTAPI APP
@@ -27,12 +17,9 @@ app = FastAPI(
     version="1.0.0",
 )
 
-
 # -----------------------------------
-# CORS CONFIG (INTENTIONAL OPEN)
+# CORS (OPEN FOR NOW)
 # -----------------------------------
-# Safe for now (API-only backend)
-# Can be locked later when frontend domain stabilizes
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -41,24 +28,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # -----------------------------------
-# ROUTER REGISTRATION
+# ROUTERS
 # -----------------------------------
 app.include_router(assets_router)
 app.include_router(assets_import_router)
 app.include_router(assets_jobs_router)
 app.include_router(asset_relationships_router)
-
-
-# -----------------------------------
-# STARTUP EVENT
-# -----------------------------------
-@app.on_event("startup")
-async def startup_event():
-    # If database.py failed, app would never reach here
-    print("✅ CRV360 Backend started successfully")
-
 
 # -----------------------------------
 # ROOT
@@ -71,9 +47,8 @@ async def root():
         "version": "1.0.0",
     }
 
-
 # -----------------------------------
-# HEALTH CHECK (NO DB TOUCH)
+# HEALTH (NO DB TOUCH)
 # -----------------------------------
 @app.get("/health")
 async def health():
