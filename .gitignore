@@ -15,3 +15,15 @@ ProductFrontend/node_modules/
 ProductFrontend/build/
 ProductFrontend/dist/
 ProductFrontend/*.log
+
+# Python cache files (generated automatically)
+__pycache__/
+*.pyc
+
+# Environment variables (SECURITY RISK - Do not commit!)
+.env
+
+# Virtual Environment folder (Too large, installable via requirements.txt)
+venv/
+.venv/
+env/
