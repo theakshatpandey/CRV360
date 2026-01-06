@@ -1,7 +1,6 @@
-from database import db
+# ✅ Safe Import
+from database import operational_indicators
 from datetime import datetime
-
-indicators_collection = db["operational_indicators"]
 
 indicators = [
     {
@@ -41,7 +40,7 @@ indicators = [
 ]
 
 for ind in indicators:
-    indicators_collection.update_one(
+    operational_indicators.update_one(
         {"type": ind["type"]},
         {"$set": ind},
         upsert=True

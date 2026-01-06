@@ -1,5 +1,6 @@
+# ✅ Safe Import (Assuming user adds this collection to database.py)
+# If not in database.py, use this backup method:
 from database import db
-
 collection = db["risky_assets"]
 
 risks = [

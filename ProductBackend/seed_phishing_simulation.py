@@ -1,4 +1,5 @@
-from database import db  # ✅ Centralized import
+# ✅ Safe Imports
+from database import phishing_simulations, phishing_templates
 from datetime import datetime, timedelta, timezone
 
 def seed_simulation_data():
@@ -7,15 +8,10 @@ def seed_simulation_data():
     """
     print("🔄 Starting Phishing Simulation Data Seeding...")
 
-    # Collections
-    SIM_COLLECTION = "phishing_simulations"
-    TMP_COLLECTION = "phishing_templates"
-
     # Drop existing
-    for col in [SIM_COLLECTION, TMP_COLLECTION]:
-        if col in db.list_collection_names():
-            db[col].drop()
-            print(f"   ✓ Dropped {col}")
+    phishing_simulations.drop()
+    phishing_templates.drop()
+    print("   ✓ Dropped existing collections")
 
     now = datetime.now(timezone.utc)
 
@@ -129,10 +125,10 @@ def seed_simulation_data():
         }
     ]
 
-    db[SIM_COLLECTION].insert_many(simulations)
+    phishing_simulations.insert_many(simulations)
     print(f"   ✓ Inserted {len(simulations)} simulations")
 
-    db[TMP_COLLECTION].insert_many(templates)
+    phishing_templates.insert_many(templates)
     print(f"   ✓ Inserted {len(templates)} templates")
 
     print("\n✅ Phishing Simulation data seeding completed successfully!")

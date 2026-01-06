@@ -1,7 +1,9 @@
-from database import db
+# ✅ Safe Import
+from database import daily_trends
 from datetime import datetime, timedelta
 
-trends_collection = db["daily_trends"]
+# Alias for clarity
+trends_collection = daily_trends
 
 # Generate 5 days data
 base_date = datetime.utcnow() - timedelta(days=5)

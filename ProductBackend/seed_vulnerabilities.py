@@ -1,7 +1,9 @@
-from database import db
-from datetime import datetime, timedelta
+# ✅ Safe Import
+from database import vulnerabilities_collection
+from datetime import datetime
 
-collection = db["vulnerabilities"]
+# Alias
+collection = vulnerabilities_collection
 
 vulns = [
     {

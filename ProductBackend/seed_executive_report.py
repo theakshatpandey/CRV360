@@ -1,4 +1,6 @@
-from database import db  # ✅ Centralized import
+# ✅ Safe Import
+# Ensure 'executive_reports = db["executive_reports"]' is in database.py
+from database import executive_reports
 from datetime import datetime, timezone
 
 def seed_executive_report_data():
@@ -7,12 +9,12 @@ def seed_executive_report_data():
     """
     print("🔄 Starting Executive Report Data Seeding...")
 
-    COLLECTION_NAME = "executive_reports"
+    # Safe alias
+    collection = executive_reports
 
     # Drop existing
-    if COLLECTION_NAME in db.list_collection_names():
-        db[COLLECTION_NAME].drop()
-        print(f"   ✓ Dropped existing {COLLECTION_NAME} collection")
+    collection.drop()
+    print("   ✓ Dropped existing executive_reports collection")
 
     now = datetime.now(timezone.utc)
 
@@ -58,7 +60,7 @@ def seed_executive_report_data():
         "generated_at": now
     }
 
-    db[COLLECTION_NAME].insert_one(report_data)
+    collection.insert_one(report_data)
     print(f"   ✓ Inserted executive report for {report_data['reporting_period']}")
     print("\n✅ Executive Report data seeding completed successfully!")
 

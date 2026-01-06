@@ -1,4 +1,10 @@
-from database import db  # ✅ Centralized import
+# ✅ Safe Imports
+from database import (
+    compliance_frameworks,
+    compliance_violations,
+    compliance_actions,
+    evidence_intelligence
+)
 from datetime import datetime
 
 def seed_compliance_data():
@@ -8,12 +14,12 @@ def seed_compliance_data():
     
     print("🔄 Starting Compliance Data Seeding...")
     
-    # Drop existing collections to avoid duplicates
-    collections_to_drop = ["compliance_frameworks", "compliance_violations", "compliance_actions", "evidence_intelligence"]
-    for collection in collections_to_drop:
-        if collection in db.list_collection_names():
-            db[collection].drop()
-            print(f"   ✓ Dropped {collection}")
+    # Drop existing collections using the imported objects
+    compliance_frameworks.drop()
+    compliance_violations.drop()
+    compliance_actions.drop()
+    evidence_intelligence.drop()
+    print("   ✓ Dropped existing collections")
     
     # ============================================
     # 1. COMPLIANCE FRAMEWORKS COLLECTION
@@ -101,7 +107,7 @@ def seed_compliance_data():
         }
     ]
     
-    db["compliance_frameworks"].insert_many(frameworks_data)
+    compliance_frameworks.insert_many(frameworks_data)
     print(f"   ✓ Inserted {len(frameworks_data)} frameworks")
     
     # ============================================
@@ -203,7 +209,7 @@ def seed_compliance_data():
         }
     ]
     
-    db["compliance_violations"].insert_many(violations_data)
+    compliance_violations.insert_many(violations_data)
     print(f"   ✓ Inserted {len(violations_data)} violations")
     
     # ============================================
@@ -251,7 +257,7 @@ def seed_compliance_data():
         }
     ]
     
-    db["compliance_actions"].insert_many(actions_data)
+    compliance_actions.insert_many(actions_data)
     print(f"   ✓ Inserted {len(actions_data)} recommended actions")
     
     # ============================================
@@ -296,7 +302,7 @@ def seed_compliance_data():
         }
     ]
     
-    db["evidence_intelligence"].insert_many(evidence_data)
+    evidence_intelligence.insert_many(evidence_data)
     print(f"   ✓ Inserted {len(evidence_data)} evidence intelligence records")
     
     print("\n✅ Compliance data seeding completed successfully!")

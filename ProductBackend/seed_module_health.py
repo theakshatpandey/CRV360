@@ -1,7 +1,9 @@
-from database import db
+# ✅ Safe Import
+from database import module_health
 from datetime import datetime
 
-collection = db["module_health"]
+# Alias
+collection = module_health
 
 modules = [
     {

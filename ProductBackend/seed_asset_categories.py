@@ -1,6 +1,6 @@
-from database import db
+from database import asset_categories_collection
 
-collection = db["asset_categories"]
+collection = asset_categories_collection
 
 categories = [
     {"category": "Servers", "total": 189, "compliant": 137, "percentage": 72.5},
@@ -10,6 +10,7 @@ categories = [
     {"category": "IoT Devices", "total": 134, "compliant": 92, "percentage": 68.7}
 ]
 
+# Use the safely imported collection
 collection.delete_many({})
 collection.insert_many(categories)
 

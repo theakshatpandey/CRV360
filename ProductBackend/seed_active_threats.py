@@ -1,6 +1,7 @@
-from database import db
+from database import active_threats_collection
 
-collection = db["active_threats"]
+# Alias for clarity (optional, or just use the variable directly)
+collection = active_threats_collection
 
 threats = [
     {
@@ -35,6 +36,7 @@ threats = [
     }
 ]
 
+# Use the safely imported collection
 collection.delete_many({})
 collection.insert_many(threats)
 

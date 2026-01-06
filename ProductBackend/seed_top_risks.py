@@ -1,7 +1,9 @@
-from database import db
+# ✅ Safe Import
+from database import top_risks
 from datetime import datetime
 
-collection = db["top_risks"]
+# Alias
+collection = top_risks
 
 risks = [
     {

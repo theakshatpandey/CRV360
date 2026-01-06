@@ -1,6 +1,8 @@
-from database import db
+# ✅ Safe Import
+from database import vuln_severity_dist_collection
 
-collection = db["vuln_severity_distribution"]
+# Alias
+collection = vuln_severity_dist_collection
 
 dist = [
     {"severity": "Critical", "count": 89, "trend": 12},

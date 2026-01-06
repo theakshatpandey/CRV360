@@ -1,7 +1,9 @@
-from database import db
+# ✅ Safe Import
+from database import assets_collection
 from datetime import datetime
 
-collection = db["assets"]
+# Alias for clarity
+collection = assets_collection
 
 assets = [
     {
@@ -66,6 +68,7 @@ assets = [
     }
 ]
 
+# Use the safely imported collection
 collection.delete_many({})
 collection.insert_many(assets)
 

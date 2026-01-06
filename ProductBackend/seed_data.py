@@ -1,7 +1,10 @@
 # [BACKEND - PYTHON]
 # Run this script to wipe the DB and insert fresh test data.
 
-from database import db  # ✅ Centralized import
+# ✅ Safe Imports
+# Note: 'alerts' is not a standard module, so we maintain db access for it
+# but switch assets and vulnerabilities to the safe pattern.
+from database import assets_collection, vulnerabilities_collection, db
 from datetime import datetime, timedelta
 
 def seed_database():
@@ -10,9 +13,9 @@ def seed_database():
 
         # 1. Clear old data
         print("🧹 Clearing old data...")
-        db.assets.delete_many({})
-        db.vulnerabilities.delete_many({})
-        db.alerts.delete_many({})
+        assets_collection.delete_many({})
+        vulnerabilities_collection.delete_many({})
+        db["alerts"].delete_many({}) # Manually accessing non-standard collection
 
         # 2. Create Assets
         print("🏗️  Creating Assets...")
@@ -22,7 +25,7 @@ def seed_database():
             {"name": "HR-Portal-Web", "type": "Web Server", "criticality": "High", "ip": "10.0.5.25"},
             {"name": "Dev-Workstation-04", "type": "Workstation", "criticality": "Low", "ip": "172.16.0.55"}
         ]
-        asset_ids = db.assets.insert_many(assets).inserted_ids
+        asset_ids = assets_collection.insert_many(assets).inserted_ids
 
         # 3. Create Vulnerabilities (Linked to Assets)
         print("🦠 Creating Vulnerabilities...")
@@ -64,7 +67,7 @@ def seed_database():
                 "threat_actors": []
             }
         ]
-        db.vulnerabilities.insert_many(vulns)
+        vulnerabilities_collection.insert_many(vulns)
 
         # 4. Create Alerts (For the 'Active Threats' section)
         print("🚨 Creating Alerts...")
@@ -86,7 +89,7 @@ def seed_database():
                 "status": "Escalated"
             }
         ]
-        db.alerts.insert_many(alerts)
+        db["alerts"].insert_many(alerts)
 
         print("\n🎉 SUCCESS! Database populated.")
 

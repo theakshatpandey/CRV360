@@ -1,7 +1,9 @@
-from database import db
+# ✅ Safe Import
+from database import daily_alerts
 from datetime import datetime
 
-collection = db["daily_alerts"]
+# Alias for clarity
+collection = daily_alerts
 
 alerts = {
     "date": datetime.utcnow().date().isoformat(),
@@ -12,6 +14,7 @@ alerts = {
     "total": 156
 }
 
+# Use the safely imported collection
 collection.delete_many({})
 collection.insert_one(alerts)
 

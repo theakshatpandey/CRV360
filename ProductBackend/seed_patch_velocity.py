@@ -1,7 +1,9 @@
-from database import db
+# ✅ Safe Import
+from database import patch_velocity_collection
 from datetime import datetime, timedelta
 
-collection = db["patch_velocity"]
+# Alias
+collection = patch_velocity_collection
 
 base = datetime.utcnow() - timedelta(days=30)
 

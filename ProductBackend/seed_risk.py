@@ -1,18 +1,27 @@
-from database import db  # ✅ Centralized import
+# ✅ Safe Imports
+from database import (
+    risk_summary_col,
+    risk_posture_col,
+    risk_category_breakdown_col,
+    risk_business_units_col,
+    risk_internal_drivers_col,
+    risk_external_drivers_col,
+    risk_recommendations_col
+)
 
-# Clear existing data (optional, for clean seeding)
-db.risk_summary.drop()
-db.risk_posture.drop()
-db.risk_category_breakdown.drop()
-db.risk_business_units.drop()
-db.risk_internal_drivers.drop()
-db.risk_external_drivers.drop()
-db.risk_recommendations.drop()
+# Clear existing data
+risk_summary_col.drop()
+risk_posture_col.drop()
+risk_category_breakdown_col.drop()
+risk_business_units_col.drop()
+risk_internal_drivers_col.drop()
+risk_external_drivers_col.drop()
+risk_recommendations_col.drop()
 
 print("Seeding risk exposure data...")
 
 # 1. risk_summary
-db.risk_summary.insert_one({
+risk_summary_col.insert_one({
     "overall_risk": 7.2,
     "projected_risk": 5.9,
     "time_to_remediate": 23,
@@ -22,7 +31,7 @@ db.risk_summary.insert_one({
 })
 
 # 2. risk_posture
-db.risk_posture.insert_one({
+risk_posture_col.insert_one({
     "categories": [
         {"category": "Vulnerabilities", "current": 7.5, "target": 5.5, "industry": 7.2, "peer": 7.4},
         {"category": "Threats", "current": 7.5, "target": 5.5, "industry": 7.2, "peer": 7.4},
@@ -34,7 +43,7 @@ db.risk_posture.insert_one({
 })
 
 # 3. risk_category_breakdown
-db.risk_category_breakdown.insert_one({
+risk_category_breakdown_col.insert_one({
     "breakdown": [
         {"name": "Vulnerabilities", "value": 35, "color": "#ef4444"},
         {"name": "Compliance Gaps", "value": 25, "color": "#f97316"},
@@ -44,7 +53,7 @@ db.risk_category_breakdown.insert_one({
 })
 
 # 4. risk_business_units
-db.risk_business_units.insert_many([
+risk_business_units_col.insert_many([
     {"name": "Production Systems", "risk": 8.5, "contribution": 28.5, "assets": 89, "vulns": 34, "criticality": 95, "trend": -0.2},
     {"name": "Corporate Network", "risk": 7.1, "contribution": 22.3, "assets": 234, "vulns": 45, "criticality": 78, "trend": 0.3},
     {"name": "Remote Endpoints", "risk": 6.9, "contribution": 19.8, "assets": 445, "vulns": 67, "criticality": 65, "trend": -0.4},
@@ -52,7 +61,7 @@ db.risk_business_units.insert_many([
 ])
 
 # 5. risk_internal_drivers
-db.risk_internal_drivers.insert_many([
+risk_internal_drivers_col.insert_many([
     {"rank": 1, "title": "Unpatched Systems", "description": "89 production servers missing critical patches", "risk": 8.5, "issues": 89, "incident": "INC-2024-0045"},
     {"rank": 2, "title": "Weak Authentication", "description": "234 admin accounts without MFA", "risk": 7.8, "issues": 234, "incident": "INC-2024-0031"},
     {"rank": 3, "title": "Cloud Misconfigurations", "description": "67 S3 buckets with public exposure", "risk": 7.1, "issues": 67},
@@ -60,7 +69,7 @@ db.risk_internal_drivers.insert_many([
 ])
 
 # 6. risk_external_drivers
-db.risk_external_drivers.insert_many([
+risk_external_drivers_col.insert_many([
     {"rank": 1, "title": "APT29 Campaign Targeting", "description": "Active targeting of Apache servers with CVE-2024-12345", "risk": 8.8, "actor": "APT29 (Cozy Bear)", "incident": "INC-2024-0045"},
     {"rank": 2, "title": "Exposed Services", "description": "23 internet-facing services with known vulnerabilities", "risk": 8.1, "actor": "Multiple threat actors"},
     {"rank": 3, "title": "Phishing Campaigns", "description": "Finance-themed phishing targeting employees", "risk": 7.2, "actor": "FIN7 (Carbanak)", "incident": "INC-2024-0039"},
@@ -68,7 +77,7 @@ db.risk_external_drivers.insert_many([
 ])
 
 # 7. risk_recommendations
-db.risk_recommendations.insert_many([
+risk_recommendations_col.insert_many([
     {
         "priority": "Critical",
         "roi": "High",

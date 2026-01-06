@@ -1,4 +1,9 @@
-from database import db  # ✅ Centralized import
+from database import (
+    threat_campaigns,
+    security_alerts,
+    incident_responses,
+    alert_metrics
+)
 from datetime import datetime, timedelta, timezone
 
 def seed_events_data():
@@ -8,12 +13,13 @@ def seed_events_data():
     
     print("🔄 Starting Events & Alert Monitoring Data Seeding...")
     
-    # Drop existing collections
-    collections_to_drop = ["threat_campaigns", "security_alerts", "incident_responses", "alert_metrics"]
-    for collection in collections_to_drop:
-        if collection in db.list_collection_names():
-            db[collection].drop()
-            print(f"   ✓ Dropped {collection}")
+    # Drop existing collections to ensure a clean slate
+    # We call .drop() directly on the imported collection objects
+    threat_campaigns.drop()
+    security_alerts.drop()
+    incident_responses.drop()
+    alert_metrics.drop()
+    print("   ✓ Dropped existing collections")
     
     # Helper for current UTC time
     now = datetime.now(timezone.utc)
@@ -72,7 +78,7 @@ def seed_events_data():
         }
     ]
     
-    db["threat_campaigns"].insert_many(campaigns_data)
+    threat_campaigns.insert_many(campaigns_data)
     print(f"   ✓ Inserted {len(campaigns_data)} threat campaigns")
     
     # ============================================
@@ -165,7 +171,7 @@ def seed_events_data():
         }
     ]
     
-    db["security_alerts"].insert_many(alerts_data)
+    security_alerts.insert_many(alerts_data)
     print(f"   ✓ Inserted {len(alerts_data)} security alerts")
     
     # ============================================
@@ -210,7 +216,7 @@ def seed_events_data():
         }
     ]
     
-    db["incident_responses"].insert_many(responses_data)
+    incident_responses.insert_many(responses_data)
     print(f"   ✓ Inserted {len(responses_data)} incident responses")
     
     # ============================================
@@ -237,7 +243,7 @@ def seed_events_data():
         }
     ]
     
-    db["alert_metrics"].insert_many(metrics_data)
+    alert_metrics.insert_many(metrics_data)
     print(f"   ✓ Inserted {len(metrics_data)} alert metrics")
     
     print("\n✅ Events & Alert Monitoring data seeding completed successfully!")

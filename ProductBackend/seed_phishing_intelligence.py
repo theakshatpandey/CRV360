@@ -1,4 +1,5 @@
-from database import db  # ✅ Centralized import
+# ✅ Safe Import
+from database import phishing_intelligence
 from datetime import datetime, timedelta, timezone
 
 def seed_phishing_data():
@@ -7,13 +8,9 @@ def seed_phishing_data():
     """
     print("🔄 Starting Phishing Intelligence Data Seeding...")
 
-    # Collection Name
-    COLLECTION_NAME = "phishing_intelligence"
-
     # Drop existing collection to start fresh
-    if COLLECTION_NAME in db.list_collection_names():
-        db[COLLECTION_NAME].drop()
-        print(f"   ✓ Dropped existing {COLLECTION_NAME} collection")
+    phishing_intelligence.drop()
+    print("   ✓ Dropped existing phishing_intelligence collection")
 
     now = datetime.now(timezone.utc)
 
@@ -106,7 +103,7 @@ def seed_phishing_data():
     ]
 
     # Insert Data
-    db[COLLECTION_NAME].insert_many(phishing_data)
+    phishing_intelligence.insert_many(phishing_data)
     print(f"   ✓ Inserted {len(phishing_data)} phishing intelligence records")
     print("\n✅ Phishing Intelligence data seeding completed successfully!")
 

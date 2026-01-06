@@ -1,4 +1,5 @@
-from database import db  # ✅ Centralized import
+# ✅ Safe Import
+from database import incident_responses
 from datetime import datetime, timedelta, timezone
 
 def seed_incident_data():
@@ -7,12 +8,9 @@ def seed_incident_data():
     """
     print("🔄 Starting Incident Response Data Seeding...")
 
-    COLLECTION_NAME = "incident_responses"
-
-    # Drop to ensure clean slate for this module's testing
-    if COLLECTION_NAME in db.list_collection_names():
-        db[COLLECTION_NAME].drop()
-        print(f"   ✓ Dropped existing {COLLECTION_NAME} collection")
+    # Drop to ensure clean slate
+    incident_responses.drop()
+    print("   ✓ Dropped existing incident_responses collection")
 
     now = datetime.now(timezone.utc)
 
@@ -94,7 +92,7 @@ def seed_incident_data():
         }
     ]
 
-    db[COLLECTION_NAME].insert_many(incidents)
+    incident_responses.insert_many(incidents)
     print(f"   ✓ Inserted {len(incidents)} incidents")
     print("\n✅ Incident Response data seeding completed successfully!")
 

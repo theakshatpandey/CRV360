@@ -1,7 +1,6 @@
-from database import db
+# ✅ Safe Import
+from database import metrics_collection
 from datetime import datetime
-
-metrics_collection = db["metrics"]
 
 key_metrics = [
     {
@@ -55,4 +54,3 @@ for m in key_metrics:
     )
 
 print("Key metrics seeded successfully! Check MongoDB Compass.")
-print("You can now delete this file or run it again to update values.")

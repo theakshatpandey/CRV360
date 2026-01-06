@@ -1,7 +1,9 @@
-from database import db
+# ✅ Safe Import
+from database import vuln_summary_collection
 from datetime import datetime
 
-collection = db["vuln_summary"]
+# Alias
+collection = vuln_summary_collection
 
 summary = {
     "exposure_score": 72,

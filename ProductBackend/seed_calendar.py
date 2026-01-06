@@ -1,7 +1,9 @@
-from database import db
+# ✅ Safe Import
+from database import calendar_events
 from datetime import datetime, timedelta
 
-events_collection = db["calendar_events"]
+# Alias for clarity
+events_collection = calendar_events
 
 events = [
     {
@@ -30,6 +32,7 @@ events = [
     }
 ]
 
+# Use the safely imported collection
 events_collection.delete_many({})
 events_collection.insert_many(events)
 

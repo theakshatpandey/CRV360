@@ -1,12 +1,13 @@
-from database import db  # ✅ Centralized import
+# ✅ Safe Import
+from database import system_settings_collection, users_collection
 from datetime import datetime, timezone
 
 def seed_full_settings():
     print("🔄 Starting Full Settings Data Seeding...")
 
     # 1. System Settings
-    if "system_settings" in db.list_collection_names():
-        db["system_settings"].drop()
+    # Use the imported collection object directly
+    system_settings_collection.drop()
     
     now = datetime.now(timezone.utc)
 
@@ -55,12 +56,11 @@ def seed_full_settings():
             "alerts_processed": 15632
         }
     }
-    db["system_settings"].insert_one(settings)
+    system_settings_collection.insert_one(settings)
     print("   ✓ Seeding system_settings")
 
     # 2. Users
-    if "users" in db.list_collection_names():
-        db["users"].drop()
+    users_collection.drop()
     
     users = [
         {"id": "u1", "name": "John Smith", "email": "john.smith@company.com", "role": "Admin", "status": "Active", "last_login": now},
@@ -68,7 +68,7 @@ def seed_full_settings():
         {"id": "u3", "name": "Mike Chen", "email": "mike.chen@company.com", "role": "Analyst", "status": "Active", "last_login": now},
         {"id": "u4", "name": "Lisa Davis", "email": "lisa.davis@company.com", "role": "Viewer", "status": "Inactive", "last_login": now}
     ]
-    db["users"].insert_many(users)
+    users_collection.insert_many(users)
     print("   ✓ Seeding users")
 
     print("\n✅ Full Settings seeding completed!")
