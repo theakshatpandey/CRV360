@@ -1,25 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# -----------------------------------
-# ROUTERS
-# -----------------------------------
+import database  # force DB init
+
 from routers.assets import router as assets_router
 from routers.assets_import import router as assets_import_router
 from routers.assets_jobs import router as assets_jobs_router
 from routers.asset_relationships import router as asset_relationships_router
 
-# -----------------------------------
-# FASTAPI APP
-# -----------------------------------
-app = FastAPI(
-    title="CRV360 Backend",
-    version="1.0.0",
-)
+app = FastAPI(title="CRV360 Backend", version="1.0.0")
 
-# -----------------------------------
-# CORS (OPEN FOR NOW)
-# -----------------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,28 +18,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# -----------------------------------
-# ROUTERS
-# -----------------------------------
 app.include_router(assets_router)
 app.include_router(assets_import_router)
 app.include_router(assets_jobs_router)
 app.include_router(asset_relationships_router)
 
-# -----------------------------------
-# ROOT
-# -----------------------------------
 @app.get("/")
-async def root():
-    return {
-        "status": "ok",
-        "service": "CRV360 Backend",
-        "version": "1.0.0",
-    }
+def root():
+    return {"message": "CRV360 Unified Backend Running 🚀"}
 
-# -----------------------------------
-# HEALTH (NO DB TOUCH)
-# -----------------------------------
 @app.get("/health")
-async def health():
+def health():
     return {"status": "healthy"}
