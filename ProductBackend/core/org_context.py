@@ -2,10 +2,10 @@
 
 def get_current_org():
     """
-    Temporary hardcoded org context.
-    Later this will come from auth/JWT.
+    Temporary org resolver.
+    Later this will come from JWT / auth context.
     """
     return {
         "org_id": "org_demo",
-        "org_name": "Demo Organization"
+        "org_name": "CRV360 Demo Org"
     }

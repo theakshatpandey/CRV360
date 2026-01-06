@@ -13,7 +13,7 @@ rows_col = db["asset_ingestion_rows"]
 # -----------------------------------
 # 1️⃣ LIST ALL INGESTION JOBS
 # -----------------------------------
-@router.get("")
+@router.get("/")
 async def list_jobs():
     jobs = list(
         jobs_col.find(
