@@ -3,16 +3,20 @@ from fastapi.responses import StreamingResponse
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 import io
-from database import db  # ✅ centralized import
+# ✅ Safe Import
+from database import executive_reports
 from core.org_context import get_current_org
 
-
 router = APIRouter(prefix="/executive-report", tags=["executive-report"])
+
+# Alias
+collection = executive_reports
 
 @router.get("/latest")
 async def get_latest_report():
     try:
-        report = db["executive_reports"].find_one({}, {"_id": 0}, sort=[("generated_at", -1)])
+        # Use collection directly
+        report = collection.find_one({}, {"_id": 0}, sort=[("generated_at", -1)])
         if not report:
             raise HTTPException(status_code=404, detail="No report found")
         return {"status": "success", "data": report}
@@ -22,7 +26,7 @@ async def get_latest_report():
 @router.get("/export-pdf")
 async def export_pdf():
     try:
-        report = db["executive_reports"].find_one({}, {"_id": 0}, sort=[("generated_at", -1)])
+        report = collection.find_one({}, {"_id": 0}, sort=[("generated_at", -1)])
         if not report:
             raise HTTPException(status_code=404, detail="No report found")
 

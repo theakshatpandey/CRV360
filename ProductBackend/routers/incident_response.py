@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from datetime import datetime
 from pydantic import BaseModel
-from database import db  # ✅ centralized import
+# ✅ Safe Import
+from database import incident_responses
 from core.org_context import get_current_org
-
 
 router = APIRouter(prefix="/incident-response", tags=["incident-response"])
 
@@ -26,7 +26,8 @@ class IncidentCreate(BaseModel):
 @router.get("/incidents")
 async def get_incidents():
     try:
-        incidents = list(db["incident_responses"].find({}, {"_id": 0}).sort("detected_at", -1))
+        # Use imported collection directly
+        incidents = list(incident_responses.find({}, {"_id": 0}).sort("detected_at", -1))
         return {"status": "success", "data": incidents}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -49,7 +50,9 @@ async def create_incident(incident: IncidentCreate):
             "regulatory_impact": [],
             "sla_status": "On Track"
         }
-        db["incident_responses"].insert_one(new_incident)
+        
+        # Use imported collection directly
+        incident_responses.insert_one(new_incident)
         
         # Remove _id before returning
         new_incident.pop("_id", None)
@@ -61,7 +64,8 @@ async def create_incident(incident: IncidentCreate):
 @router.get("/stats")
 async def get_incident_stats():
     try:
-        incidents = list(db["incident_responses"].find({}, {"_id": 0}))
+        # Use imported collection directly
+        incidents = list(incident_responses.find({}, {"_id": 0}))
         
         total_incidents = len(incidents)
         high_impact = len([i for i in incidents if i.get("severity") in ["Critical", "High"] and i.get("status") != "Resolved"])
@@ -85,7 +89,8 @@ async def get_incident_stats():
 @router.post("/incidents/{incident_id}/status")
 async def update_status(incident_id: str, status: str):
     try:
-        result = db["incident_responses"].update_one(
+        # Use imported collection directly
+        result = incident_responses.update_one(
             {"incident_id": incident_id},
             {"$set": {"status": status, "updated_at": datetime.utcnow()}}
         )

@@ -1,34 +1,23 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
-from database import db
+# ✅ Safe Imports
+from database import assets_collection, asset_relationships_collection
 from core.org_context import get_current_org
-
 
 router = APIRouter(prefix="/api/assets", tags=["Asset Relationships"])
 
-assets_col = db["assets"]
-relations_col = db["asset_relationships"]
-
-
-# --------------------------------------------------
-# 🔹 REQUEST SCHEMAS
-# --------------------------------------------------
+# Aliases
+assets_col = assets_collection
+relations_col = asset_relationships_collection
 
 class AssetRelationshipCreate(BaseModel):
     source_asset_id: str
     target_asset_id: str
     relationship_type: str
 
-
-# --------------------------------------------------
-# 1️⃣ CREATE ASSET RELATIONSHIP
-# POST /api/assets/relationships
-# --------------------------------------------------
-
 @router.post("/relationships")
 async def create_relationship(payload: AssetRelationshipCreate):
-    # Validate source & target assets exist
     source = assets_col.find_one({"asset_id": payload.source_asset_id})
     target = assets_col.find_one({"asset_id": payload.target_asset_id})
 
@@ -45,51 +34,18 @@ async def create_relationship(payload: AssetRelationshipCreate):
         "discovered_by": "manual",
         "created_at": datetime.utcnow()
     }
-
     relations_col.insert_one(relationship)
-
-    return {
-        "status": "success",
-        "message": "Relationship created"
-    }
-
-
-# --------------------------------------------------
-# 2️⃣ FETCH RELATIONSHIPS FOR AN ASSET
-# GET /api/assets/{asset_id}/relationships
-# --------------------------------------------------
+    return {"status": "success", "message": "Relationship created"}
 
 @router.get("/{asset_id}/relationships")
 async def get_asset_relationships(asset_id: str):
     pipeline = [
         {"$match": {"source_asset_id": asset_id}},
-        {
-            "$lookup": {
-                "from": "assets",
-                "localField": "target_asset_id",
-                "foreignField": "asset_id",
-                "as": "target_asset"
-            }
-        },
+        {"$lookup": {"from": "assets", "localField": "target_asset_id", "foreignField": "asset_id", "as": "target_asset"}},
         {"$unwind": "$target_asset"},
-        {
-            "$project": {
-                "_id": 0,
-                "target_asset_name": "$target_asset.asset_name",
-                "relationship_type": 1,
-                "risk_score": "$target_asset.risk_score",
-                "exposure_level": "$target_asset.exposure_level"
-            }
-        }
+        {"$project": {"_id": 0, "target_asset_name": "$target_asset.asset_name", "relationship_type": 1, "risk_score": "$target_asset.risk_score", "exposure_level": "$target_asset.exposure_level"}}
     ]
-
     return list(relations_col.aggregate(pipeline))
-
-
-# --------------------------------------------------
-# 3️⃣ BLAST RADIUS (DEPENDENCY IMPACT)
-# GET /api/assets/{asset_id}/blast-radius
-# --------------------------------------------------
 
 @router.get("/{asset_id}/blast-radius")
 async def get_blast_radius(asset_id: str, depth: int = 2):
@@ -97,21 +53,12 @@ async def get_blast_radius(asset_id: str, depth: int = 2):
     impacted_assets = []
 
     def traverse(current_asset_id: str, level: int):
-        if level > depth or current_asset_id in visited:
-            return
-
+        if level > depth or current_asset_id in visited: return
         visited.add(current_asset_id)
-
-        relations = relations_col.find({
-            "source_asset_id": current_asset_id
-        })
-
+        
+        relations = relations_col.find({"source_asset_id": current_asset_id})
         for rel in relations:
-            target = assets_col.find_one(
-                {"asset_id": rel["target_asset_id"]},
-                {"_id": 0}
-            )
-
+            target = assets_col.find_one({"asset_id": rel["target_asset_id"]}, {"_id": 0})
             if target:
                 impacted_assets.append({
                     "asset_id": target["asset_id"],
@@ -120,12 +67,7 @@ async def get_blast_radius(asset_id: str, depth: int = 2):
                     "exposure_level": target.get("exposure_level", "Unknown"),
                     "impact_level": level
                 })
-
                 traverse(target["asset_id"], level + 1)
 
     traverse(asset_id, 1)
-
-    return {
-        "root_asset_id": asset_id,
-        "affected_assets": impacted_assets
-    }
+    return {"root_asset_id": asset_id, "affected_assets": impacted_assets}

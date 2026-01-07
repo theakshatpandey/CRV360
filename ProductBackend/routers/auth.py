@@ -1,16 +1,15 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordRequestForm
+# ✅ Safe Import
 from database import users_collection
 from security import verify_password, create_access_token
 from core.org_context import get_current_org
-
-
-
 
 router = APIRouter()
 
 @router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    # Use imported collection
     user = users_collection.find_one({"email": form_data.username})
     if not user or not verify_password(form_data.password, user["password"]):
         raise HTTPException(

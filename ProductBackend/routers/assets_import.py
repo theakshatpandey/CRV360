@@ -2,16 +2,17 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 import csv, io, uuid
 from datetime import datetime
 
-from database import db
+# ✅ Safe Imports
+from database import assets_collection, asset_ingestion_jobs, asset_ingestion_rows
 from services.risk_engine import calculate_risk
 from core.org_context import get_current_org
 
-
 router = APIRouter(prefix="/api/assets", tags=["Assets"])
 
-assets_col = db["assets"]
-jobs_col = db["asset_ingestion_jobs"]
-rows_col = db["asset_ingestion_rows"]
+# Aliases for clarity (optional, but keeps code clean)
+assets_col = assets_collection
+jobs_col = asset_ingestion_jobs
+rows_col = asset_ingestion_rows
 
 
 @router.post("/import")

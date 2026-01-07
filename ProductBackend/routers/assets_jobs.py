@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from database import db
+# ✅ Safe Imports
+from database import asset_ingestion_jobs, asset_ingestion_rows
 from core.org_context import get_current_org
 
 router = APIRouter(
@@ -7,8 +8,9 @@ router = APIRouter(
     tags=["Asset Ingestion Jobs"]
 )
 
-jobs_col = db["asset_ingestion_jobs"]
-rows_col = db["asset_ingestion_rows"]
+# Aliases
+jobs_col = asset_ingestion_jobs
+rows_col = asset_ingestion_rows
 
 # -----------------------------------
 # 1️⃣ LIST ALL INGESTION JOBS

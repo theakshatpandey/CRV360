@@ -1,32 +1,37 @@
 from fastapi import APIRouter
-from database import db  # ✅ centralized import
-from core.org_context import get_current_org
-
+# ✅ Safe Imports
+from database import (
+    vulnerabilities_collection,
+    vuln_summary_collection,
+    active_threats_collection,
+    vuln_severity_dist_collection,
+    patch_velocity_collection
+)
 
 router = APIRouter()
 
 @router.get("/vulnerabilities/summary")
 async def get_vuln_summary():
-    summary = db["vuln_summary"].find_one({}, {"_id": 0})
+    summary = vuln_summary_collection.find_one({}, {"_id": 0})
     return summary or {}
 
 @router.get("/vulnerabilities/active-threats")
 async def get_active_threats():
-    threats = list(db["active_threats"].find({}, {"_id": 0}))
+    threats = list(active_threats_collection.find({}, {"_id": 0}))
     return {"threats": threats}
 
 @router.get("/vulnerabilities/severity-distribution")
 async def get_severity_distribution():
-    dist = list(db["vuln_severity_distribution"].find({}, {"_id": 0}))
+    dist = list(vuln_severity_dist_collection.find({}, {"_id": 0}))
     return {"distribution": dist}
 
 @router.get("/vulnerabilities/patch-velocity")
 async def get_patch_velocity():
-    velocity = db["patch_velocity"].find_one({}, {"_id": 0, "data": 0})
-    trend = list(db["patch_velocity"].find({}, {"_id": 0, "date": 0, "total_30d": 0, "avg_daily": 0}))
+    velocity = patch_velocity_collection.find_one({}, {"_id": 0, "data": 0})
+    trend = list(patch_velocity_collection.find({}, {"_id": 0, "date": 0, "total_30d": 0, "avg_daily": 0}))
     return {"summary": velocity, "trend": trend}
 
 @router.get("/vulnerabilities/inventory")
 async def get_vuln_inventory():
-    vulns = list(db["vulnerabilities"].find({}, {"_id": 0}))
+    vulns = list(vulnerabilities_collection.find({}, {"_id": 0}))
     return {"vulnerabilities": vulns}

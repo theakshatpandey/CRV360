@@ -1,10 +1,12 @@
 from fastapi import APIRouter, HTTPException
-from database import db  # ✅ centralized import
-from core.org_context import get_current_org
-
+# ✅ Safe Import
+from database import phishing_intelligence
 
 # Create Router
 router = APIRouter(prefix="/phishing", tags=["phishing"])
+
+# Alias for clarity
+collection = phishing_intelligence
 
 # ============================================
 # API ENDPOINTS
@@ -12,9 +14,15 @@ router = APIRouter(prefix="/phishing", tags=["phishing"])
 
 @router.get("/intelligence")
 async def get_phishing_intelligence():
+    """
+    GET /api/phishing/intelligence
+    
+    Fetches all active phishing campaigns for the dashboard.
+    Returns a list of threat intelligence objects.
+    """
     try:
         # Fetch all records, sorted by detection time (newest first)
-        campaigns = list(db["phishing_intelligence"].find({}, {"_id": 0}).sort("detected_at", -1))
+        campaigns = list(collection.find({}, {"_id": 0}).sort("detected_at", -1))
         
         return {
             "status": "success",
@@ -26,8 +34,14 @@ async def get_phishing_intelligence():
 
 @router.get("/intelligence/stats")
 async def get_phishing_stats():
+    """
+    GET /api/phishing/intelligence/stats
+    
+    Returns aggregated statistics for the dashboard cards.
+    (e.g., Total Attempts, Click Rate, Spoof Domains)
+    """
     try:
-        campaigns = list(db["phishing_intelligence"].find({}, {"_id": 0}))
+        campaigns = list(collection.find({}, {"_id": 0}))
         
         total_attempts = sum(c.get("targets_count", 0) for c in campaigns)
         avg_click_rate = sum(c.get("click_rate_estimate", 0) for c in campaigns) / len(campaigns) if campaigns else 0
@@ -48,8 +62,14 @@ async def get_phishing_stats():
 
 @router.post("/intelligence/{threat_id}/block-domain")
 async def block_phishing_domain(threat_id: str):
+    """
+    POST /api/phishing/intelligence/{threat_id}/block-domain
+    
+    Simulates blocking a malicious domain on the email gateway/firewall.
+    Updates the 'remediation_status.domain_takedown' field.
+    """
     try:
-        result = db["phishing_intelligence"].update_one(
+        result = collection.update_one(
             {"threat_id": threat_id},
             {"$set": {"remediation_status.domain_takedown": True, "status": "Takedown In Progress"}}
         )

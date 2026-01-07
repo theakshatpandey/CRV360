@@ -1,10 +1,15 @@
 from fastapi import APIRouter, HTTPException, Query
 from datetime import datetime
-from database import db  # ✅ centralized import
+# ✅ Safe Imports
+from database import (
+    compliance_frameworks,
+    compliance_violations,
+    compliance_actions,
+    evidence_intelligence,
+    evidence_gap_reports
+)
 from core.org_context import get_current_org
 
-
-# Create router
 router = APIRouter(prefix="/api/compliance", tags=["compliance"])
 
 # ============================================
@@ -14,28 +19,18 @@ router = APIRouter(prefix="/api/compliance", tags=["compliance"])
 @router.get("/frameworks")
 async def get_all_frameworks():
     try:
-        frameworks = list(db["compliance_frameworks"].find({}, {"_id": 0}))
-        return {
-            "status": "success",
-            "data": frameworks,
-            "count": len(frameworks)
-        }
+        data = list(compliance_frameworks.find({}, {"_id": 0}))
+        return {"status": "success", "data": data, "count": len(data)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/frameworks/{framework_id}")
 async def get_framework_details(framework_id: str):
     try:
-        framework = db["compliance_frameworks"].find_one(
-            {"framework_id": framework_id},
-            {"_id": 0}
-        )
-        if not framework:
+        data = compliance_frameworks.find_one({"framework_id": framework_id}, {"_id": 0})
+        if not data:
             raise HTTPException(status_code=404, detail="Framework not found")
-        return {
-            "status": "success",
-            "data": framework
-        }
+        return {"status": "success", "data": data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -46,65 +41,38 @@ async def get_framework_details(framework_id: str):
 @router.get("/violations")
 async def get_all_violations(severity: str = Query(None)):
     try:
-        query = {}
-        if severity:
-            query["severity"] = severity
-        
-        violations = list(db["compliance_violations"].find(query, {"_id": 0}))
-        return {
-            "status": "success",
-            "data": violations,
-            "count": len(violations)
-        }
+        query = {"severity": severity} if severity else {}
+        data = list(compliance_violations.find(query, {"_id": 0}))
+        return {"status": "success", "data": data, "count": len(data)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/violations/{violation_id}")
 async def get_violation_details(violation_id: int):
     try:
-        violation = db["compliance_violations"].find_one(
-            {"violation_id": violation_id},
-            {"_id": 0}
-        )
-        if not violation:
+        data = compliance_violations.find_one({"violation_id": violation_id}, {"_id": 0})
+        if not data:
             raise HTTPException(status_code=404, detail="Violation not found")
-        return {
-            "status": "success",
-            "data": violation
-        }
+        return {"status": "success", "data": data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/violations/{violation_id}/status")
 async def update_violation_status(violation_id: int, new_status: str):
     try:
-        allowed_statuses = ["Not Started", "In Progress", "Remediated"]
-        if new_status not in allowed_statuses:
+        allowed = ["Not Started", "In Progress", "Remediated"]
+        if new_status not in allowed:
             raise HTTPException(status_code=400, detail="Invalid status")
         
-        result = db["compliance_violations"].update_one(
+        result = compliance_violations.update_one(
             {"violation_id": violation_id},
-            {
-                "$set": {
-                    "status": new_status,
-                    "updated_at": datetime.utcnow()
-                }
-            }
+            {"$set": {"status": new_status, "updated_at": datetime.utcnow()}}
         )
-        
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Violation not found")
         
-        violation = db["compliance_violations"].find_one(
-            {"violation_id": violation_id},
-            {"_id": 0}
-        )
-        
-        return {
-            "status": "success",
-            "data": violation,
-            "message": f"Violation {violation_id} status updated to {new_status}"
-        }
+        data = compliance_violations.find_one({"violation_id": violation_id}, {"_id": 0})
+        return {"status": "success", "data": data, "message": f"Updated to {new_status}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -115,76 +83,39 @@ async def update_violation_status(violation_id: int, new_status: str):
 @router.get("/actions")
 async def get_all_actions(priority: str = Query(None)):
     try:
-        query = {}
-        if priority:
-            query["priority"] = priority
-        
-        actions = list(db["compliance_actions"].find(query, {"_id": 0}))
-        return {
-            "status": "success",
-            "data": actions,
-            "count": len(actions)
-        }
+        query = {"priority": priority} if priority else {}
+        data = list(compliance_actions.find(query, {"_id": 0}))
+        return {"status": "success", "data": data, "count": len(data)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/actions/{action_id}/take-action")
 async def take_action(action_id: int, assigned_to: str = None):
     try:
-        result = db["compliance_actions"].update_one(
+        result = compliance_actions.update_one(
             {"action_id": action_id},
-            {
-                "$set": {
-                    "status": "In Progress",
-                    "assigned_to": assigned_to,
-                    "taken_at": datetime.utcnow(),
-                    "updated_at": datetime.utcnow()
-                }
-            }
+            {"$set": {"status": "In Progress", "assigned_to": assigned_to, "taken_at": datetime.utcnow(), "updated_at": datetime.utcnow()}}
         )
-        
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Action not found")
         
-        action = db["compliance_actions"].find_one(
-            {"action_id": action_id},
-            {"_id": 0}
-        )
-        
-        return {
-            "status": "success",
-            "data": action,
-            "message": f"Action {action_id} has been taken and assigned"
-        }
+        data = compliance_actions.find_one({"action_id": action_id}, {"_id": 0})
+        return {"status": "success", "data": data, "message": f"Action {action_id} taken"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/actions/{action_id}/complete")
 async def complete_action(action_id: int):
     try:
-        result = db["compliance_actions"].update_one(
+        result = compliance_actions.update_one(
             {"action_id": action_id},
-            {
-                "$set": {
-                    "status": "Completed",
-                    "updated_at": datetime.utcnow()
-                }
-            }
+            {"$set": {"status": "Completed", "updated_at": datetime.utcnow()}}
         )
-        
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Action not found")
         
-        action = db["compliance_actions"].find_one(
-            {"action_id": action_id},
-            {"_id": 0}
-        )
-        
-        return {
-            "status": "success",
-            "data": action,
-            "message": f"Action {action_id} marked as completed"
-        }
+        data = compliance_actions.find_one({"action_id": action_id}, {"_id": 0})
+        return {"status": "success", "data": data, "message": f"Action {action_id} completed"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -195,30 +126,18 @@ async def complete_action(action_id: int):
 @router.get("/evidence")
 async def get_evidence_intelligence():
     try:
-        evidence = list(db["evidence_intelligence"].find({}, {"_id": 0}))
-        
-        # Calculate overall metrics
-        overall_coverage = sum([e["coverage_quality"] for e in evidence]) / len(evidence) if evidence else 0
-        total_gaps = sum([e["gap_count"] for e in evidence])
-        
-        return {
-            "status": "success",
-            "data": evidence,
-            "overall_coverage": round(overall_coverage, 1),
-            "total_gaps": total_gaps,
-            "count": len(evidence)
-        }
+        data = list(evidence_intelligence.find({}, {"_id": 0}))
+        coverage = sum([e["coverage_quality"] for e in data]) / len(data) if data else 0
+        gaps = sum([e["gap_count"] for e in data])
+        return {"status": "success", "data": data, "overall_coverage": round(coverage, 1), "total_gaps": gaps, "count": len(data)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/evidence/generate-gap-report")
 async def generate_gap_report():
     try:
-        # Fetch all evidence intelligence records
-        evidence = list(db["evidence_intelligence"].find({}, {"_id": 0}))
-        
-        # Create gap report
-        gap_report = {
+        evidence = list(evidence_intelligence.find({}, {"_id": 0}))
+        report = {
             "report_id": f"gap_report_{datetime.utcnow().timestamp()}",
             "generated_at": datetime.utcnow(),
             "evidence_data": evidence,
@@ -228,118 +147,19 @@ async def generate_gap_report():
                 "screenshots": next((e for e in evidence if e["evidence_type"] == "screenshots"), {}),
                 "configurations": next((e for e in evidence if e["evidence_type"] == "configurations"), {})
             },
-            "recommendations": [
-                "Update outdated documents to reflect current system configuration",
-                "Capture screenshots of recent security configurations",
-                "Document configuration changes in compliance tracking system"
-            ]
+            "recommendations": ["Update documents", "Capture screenshots", "Document configs"]
         }
-        
-        # Store report in MongoDB
-        db["evidence_gap_reports"].insert_one(gap_report)
-        
-        # Update last_gap_report_generated timestamp
-        db["evidence_intelligence"].update_many(
-            {},
-            {"$set": {"last_gap_report_generated": datetime.utcnow()}}
-        )
-        
-        return {
-            "status": "success",
-            "data": gap_report,
-            "message": "Gap report generated successfully"
-        }
+        evidence_gap_reports.insert_one(report)
+        evidence_intelligence.update_many({}, {"$set": {"last_gap_report_generated": datetime.utcnow()}})
+        return {"status": "success", "data": report, "message": "Report generated"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/evidence/gap-reports")
 async def get_gap_reports():
     try:
-        reports = list(db["evidence_gap_reports"].find({}, {"_id": 0}))
-        return {
-            "status": "success",
-            "data": reports,
-            "count": len(reports)
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# ============================================
-# CONTROL MATURITY APIs
-# ============================================
-
-@router.get("/controls")
-async def get_all_controls():
-    try:
-        # Hardcoded controls data (can be moved to database if needed)
-        controls = [
-            {
-                "id": 1,
-                "name": "Access Control",
-                "framework": "Multiple",
-                "maturity_score": 4.2,
-                "max_score": 5.0,
-                "effectiveness": 84,
-                "tested": 45,
-                "total": 52,
-                "status": "Mature",
-                "last_test": "2 weeks ago"
-            },
-            {
-                "id": 2,
-                "name": "Encryption & Cryptography",
-                "framework": "GDPR, PCI DSS",
-                "maturity_score": 3.1,
-                "max_score": 5.0,
-                "effectiveness": 62,
-                "tested": 18,
-                "total": 23,
-                "status": "Developing",
-                "last_test": "1 month ago"
-            },
-            {
-                "id": 3,
-                "name": "Incident Response",
-                "framework": "ISO 27001, NIST",
-                "maturity_score": 4.5,
-                "max_score": 5.0,
-                "effectiveness": 90,
-                "tested": 12,
-                "total": 12,
-                "status": "Optimized",
-                "last_test": "1 week ago"
-            },
-            {
-                "id": 4,
-                "name": "Change Management",
-                "framework": "SOX, ISO 27001",
-                "maturity_score": 3.8,
-                "max_score": 5.0,
-                "effectiveness": 76,
-                "tested": 28,
-                "total": 34,
-                "status": "Defined",
-                "last_test": "3 weeks ago"
-            },
-            {
-                "id": 5,
-                "name": "Vulnerability Management",
-                "framework": "PCI DSS, NIST",
-                "maturity_score": 4.0,
-                "max_score": 5.0,
-                "effectiveness": 80,
-                "tested": 34,
-                "total": 38,
-                "status": "Managed",
-                "last_test": "1 week ago"
-            }
-        ]
-        
-        return {
-            "status": "success",
-            "data": controls,
-            "count": len(controls)
-        }
+        data = list(evidence_gap_reports.find({}, {"_id": 0}))
+        return {"status": "success", "data": data, "count": len(data)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -350,56 +170,23 @@ async def get_all_controls():
 @router.get("/executive-kpis")
 async def get_executive_kpis():
     try:
-        # Get frameworks for overall compliance calculation
-        frameworks = list(db["compliance_frameworks"].find({}, {"_id": 0}))
-        overall_compliance = sum([f["compliance_percentage"] for f in frameworks]) / len(frameworks) if frameworks else 0
+        frameworks = list(compliance_frameworks.find({}, {"_id": 0}))
+        overall = sum([f["compliance_percentage"] for f in frameworks]) / len(frameworks) if frameworks else 0
         
-        # Get violations
-        violations = list(db["compliance_violations"].find({}, {"_id": 0}))
-        critical_violations = len([v for v in violations if v["severity"] == "Critical"])
+        violations = list(compliance_violations.find({}, {"_id": 0}))
+        critical = len([v for v in violations if v["severity"] == "Critical"])
         
-        # Get controls
-        controls_data = [
-            {"tested": 45, "total": 52},
-            {"tested": 18, "total": 23},
-            {"tested": 12, "total": 12},
-            {"tested": 28, "total": 34},
-            {"tested": 34, "total": 38}
-        ]
-        total_tested = sum([c["tested"] for c in controls_data])
-        total_controls = sum([c["total"] for c in controls_data])
+        # Hardcoded control stats for demo
+        controls_data = [{"tested": 45, "total": 52}, {"tested": 18, "total": 23}, {"tested": 12, "total": 12}, {"tested": 28, "total": 34}, {"tested": 34, "total": 38}]
+        tested = sum([c["tested"] for c in controls_data])
+        total = sum([c["total"] for c in controls_data])
         
         kpis = {
-            "overall_compliance": {
-                "value": round(overall_compliance, 1),
-                "trend": 3.2,
-                "target": 85,
-                "status": "improving"
-            },
-            "violations": {
-                "value": len(violations),
-                "trend": -5,
-                "critical": critical_violations,
-                "status": "improving"
-            },
-            "controls_tested": {
-                "value": total_tested,
-                "total": total_controls,
-                "percentage": round((total_tested / total_controls * 100), 0),
-                "trend": 12,
-                "status": "strong"
-            },
-            "audit_readiness": {
-                "value": 82,
-                "trend": 5,
-                "days_to_audit": 38,
-                "status": "ready"
-            }
+            "overall_compliance": {"value": round(overall, 1), "trend": 3.2, "target": 85, "status": "improving"},
+            "violations": {"value": len(violations), "trend": -5, "critical": critical, "status": "improving"},
+            "controls_tested": {"value": tested, "total": total, "percentage": round((tested/total*100), 0), "trend": 12, "status": "strong"},
+            "audit_readiness": {"value": 82, "trend": 5, "days_to_audit": 38, "status": "ready"}
         }
-        
-        return {
-            "status": "success",
-            "data": kpis
-        }
+        return {"status": "success", "data": kpis}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

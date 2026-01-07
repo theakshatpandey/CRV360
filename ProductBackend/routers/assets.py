@@ -1,13 +1,14 @@
 from fastapi import APIRouter, HTTPException
 from datetime import datetime
-from database import db
+# ✅ Safe Import
+from database import assets_collection
 from core.org_context import get_current_org
 
 
 router = APIRouter(prefix="/api/assets", tags=["Assets"])
 
-# Single source of truth collection
-assets = db["assets"]
+# Alias to keep existing code working
+assets = assets_collection
 
 
 # -----------------------------
