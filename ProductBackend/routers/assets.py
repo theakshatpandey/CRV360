@@ -17,6 +17,8 @@ assets = assets_collection
 @router.post("/")
 async def add_asset(asset: dict):
     org = get_current_org()
+    # Safe extraction for insertion
+    org_id = org.get("org_id", "org_demo")
 
     required_fields = [
         "asset_name",
@@ -40,7 +42,7 @@ async def add_asset(asset: dict):
         raise HTTPException(status_code=400, detail="risk_score must be a number")
 
     asset_doc = {
-        "org_id": org["org_id"],
+        "org_id": org_id,  # ✅ Sets the safe org_id
 
         "asset_name": asset["asset_name"],
         "asset_type": asset["asset_type"],              # Server, Endpoint, Application
@@ -70,18 +72,28 @@ async def add_asset(asset: dict):
 @router.get("/summary")
 async def get_asset_summary():
     org = get_current_org()
+    org_id = org.get("org_id", "org_demo")
 
-    match = {"org_id": org["org_id"]}
+    # ✅ ORG-SAFE QUERY PATTERN
+    # Matches records belonging to this org OR legacy records with no org_id
+    query = {
+        "$or": [
+            {"org_id": org_id},
+            {"org_id": {"$exists": False}}
+        ]
+    }
 
-    total = assets.count_documents(match)
+    total = assets.count_documents(query)
 
+    # Combine org-safe query with specific filter
+    # Result: { "$or": [...], "exposure_level": "Critical" } -> Implicit AND
     critical_actions = assets.count_documents({
-        **match,
+        **query,
         "exposure_level": "Critical"
     })
 
     avg_risk_cursor = assets.aggregate([
-        {"$match": match},
+        {"$match": query},
         {"$group": {"_id": None, "avg": {"$avg": "$risk_score"}}}
     ])
 
@@ -89,7 +101,7 @@ async def get_asset_summary():
     avg_risk = avg_risk_list[0]["avg"] if avg_risk_list else 0
 
     compliant = assets.count_documents({
-        **match,
+        **query,
         "compliance_status": "Compliant"
     })
 
@@ -109,9 +121,18 @@ async def get_asset_summary():
 @router.get("/distribution")
 async def get_asset_distribution():
     org = get_current_org()
+    org_id = org.get("org_id", "org_demo")
+
+    # ✅ ORG-SAFE QUERY
+    query = {
+        "$or": [
+            {"org_id": org_id},
+            {"org_id": {"$exists": False}}
+        ]
+    }
 
     pipeline = [
-        {"$match": {"org_id": org["org_id"]}},
+        {"$match": query},
         {
             "$group": {
                 "_id": "$asset_type",
@@ -136,9 +157,18 @@ async def get_asset_distribution():
 @router.get("/top-risk")
 async def get_top_risk_assets():
     org = get_current_org()
+    org_id = org.get("org_id", "org_demo")
+
+    # ✅ ORG-SAFE QUERY
+    query = {
+        "$or": [
+            {"org_id": org_id},
+            {"org_id": {"$exists": False}}
+        ]
+    }
 
     cursor = assets.find(
-        {"org_id": org["org_id"]},
+        query,
         {
             "_id": 0,
             "asset_name": 1,
@@ -159,9 +189,18 @@ async def get_top_risk_assets():
 @router.get("/")
 async def get_asset_inventory():
     org = get_current_org()
+    org_id = org.get("org_id", "org_demo")
+
+    # ✅ ORG-SAFE QUERY
+    query = {
+        "$or": [
+            {"org_id": org_id},
+            {"org_id": {"$exists": False}}
+        ]
+    }
 
     cursor = assets.find(
-        {"org_id": org["org_id"]},
+        query,
         {"_id": 0}
     )
 
