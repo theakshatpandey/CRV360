@@ -1,24 +1,29 @@
 from fastapi import APIRouter, HTTPException
 from datetime import datetime
-# ✅ Safe Import
-from database import assets_collection
+from database import assets_collection # ✅ using the safe export from database.py
 from core.org_context import get_current_org
-
 
 router = APIRouter(prefix="/api/assets", tags=["Assets"])
 
 # Alias to keep existing code working
 assets = assets_collection
 
+# ---------------------------------------------------
+# 🛡️ HELPER: Get Org ID Safely (Defensive)
+# ---------------------------------------------------
+def _get_org_id():
+    org = get_current_org()
+    if isinstance(org, dict):
+        return org.get("org_id", "org_demo")
+    return "org_demo"
 
 # -----------------------------
 # 1️⃣ ADD ASSET (MANUAL)
 # -----------------------------
 @router.post("/")
 async def add_asset(asset: dict):
-    org = get_current_org()
-    # Safe extraction for insertion
-    org_id = org.get("org_id", "org_demo")
+    # ✅ Safe org_id retrieval
+    org_id = _get_org_id()
 
     required_fields = [
         "asset_name",
@@ -42,14 +47,14 @@ async def add_asset(asset: dict):
         raise HTTPException(status_code=400, detail="risk_score must be a number")
 
     asset_doc = {
-        "org_id": org_id,  # ✅ Sets the safe org_id
+        "org_id": org_id,  # ✅ Uses safe variable
 
         "asset_name": asset["asset_name"],
-        "asset_type": asset["asset_type"],              # Server, Endpoint, Application
+        "asset_type": asset["asset_type"],              
         "business_unit": asset["business_unit"],
 
         "risk_score": risk_score,
-        "exposure_level": asset["exposure_level"],      # Critical / High / Medium
+        "exposure_level": asset["exposure_level"],      
         "compliance_status": asset["compliance_status"],
 
         "critical_issues": int(asset.get("critical_issues", 0)),
@@ -65,35 +70,26 @@ async def add_asset(asset: dict):
         "asset_id": str(result.inserted_id)
     }
 
-
 # -----------------------------
 # 2️⃣ ASSET SUMMARY
 # -----------------------------
 @router.get("/summary")
 async def get_asset_summary():
-    org = get_current_org()
-    org_id = org.get("org_id", "org_demo")
+    # ✅ Safe org_id retrieval
+    org_id = _get_org_id()
 
-    # ✅ ORG-SAFE QUERY PATTERN
-    # Matches records belonging to this org OR legacy records with no org_id
-    query = {
-        "$or": [
-            {"org_id": org_id},
-            {"org_id": {"$exists": False}}
-        ]
-    }
+    # ✅ Uses safe variable
+    match = {"org_id": org_id}
 
-    total = assets.count_documents(query)
+    total = assets.count_documents(match)
 
-    # Combine org-safe query with specific filter
-    # Result: { "$or": [...], "exposure_level": "Critical" } -> Implicit AND
     critical_actions = assets.count_documents({
-        **query,
+        **match,
         "exposure_level": "Critical"
     })
 
     avg_risk_cursor = assets.aggregate([
-        {"$match": query},
+        {"$match": match},
         {"$group": {"_id": None, "avg": {"$avg": "$risk_score"}}}
     ])
 
@@ -101,7 +97,7 @@ async def get_asset_summary():
     avg_risk = avg_risk_list[0]["avg"] if avg_risk_list else 0
 
     compliant = assets.count_documents({
-        **query,
+        **match,
         "compliance_status": "Compliant"
     })
 
@@ -114,25 +110,16 @@ async def get_asset_summary():
         "compliance_rate": compliance_rate
     }
 
-
 # -----------------------------
 # 3️⃣ ASSET DISTRIBUTION
 # -----------------------------
 @router.get("/distribution")
 async def get_asset_distribution():
-    org = get_current_org()
-    org_id = org.get("org_id", "org_demo")
-
-    # ✅ ORG-SAFE QUERY
-    query = {
-        "$or": [
-            {"org_id": org_id},
-            {"org_id": {"$exists": False}}
-        ]
-    }
+    # ✅ Safe org_id retrieval
+    org_id = _get_org_id()
 
     pipeline = [
-        {"$match": query},
+        {"$match": {"org_id": org_id}}, # ✅ Uses safe variable
         {
             "$group": {
                 "_id": "$asset_type",
@@ -150,25 +137,16 @@ async def get_asset_distribution():
 
     return list(assets.aggregate(pipeline))
 
-
 # -----------------------------
 # 4️⃣ TOP RISK ASSETS
 # -----------------------------
-@router.get("/top-risk")
+@router.get("/top-risk") # ✅ Confirmed EXACT route name
 async def get_top_risk_assets():
-    org = get_current_org()
-    org_id = org.get("org_id", "org_demo")
-
-    # ✅ ORG-SAFE QUERY
-    query = {
-        "$or": [
-            {"org_id": org_id},
-            {"org_id": {"$exists": False}}
-        ]
-    }
+    # ✅ Safe org_id retrieval
+    org_id = _get_org_id()
 
     cursor = assets.find(
-        query,
+        {"org_id": org_id}, # ✅ Uses safe variable
         {
             "_id": 0,
             "asset_name": 1,
@@ -182,25 +160,16 @@ async def get_top_risk_assets():
 
     return list(cursor)
 
-
 # -----------------------------
 # 5️⃣ ASSET INVENTORY
 # -----------------------------
 @router.get("/")
 async def get_asset_inventory():
-    org = get_current_org()
-    org_id = org.get("org_id", "org_demo")
-
-    # ✅ ORG-SAFE QUERY
-    query = {
-        "$or": [
-            {"org_id": org_id},
-            {"org_id": {"$exists": False}}
-        ]
-    }
+    # ✅ Safe org_id retrieval
+    org_id = _get_org_id()
 
     cursor = assets.find(
-        query,
+        {"org_id": org_id}, # ✅ Uses safe variable
         {"_id": 0}
     )
 
