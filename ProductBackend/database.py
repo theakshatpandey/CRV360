@@ -9,8 +9,8 @@ load_dotenv(override=False)
 
 MONGO_URI = os.getenv("MONGO_URI")
 if not MONGO_URI:
-    # Fallback for local testing if env var isn't set (Optional)
-    print("⚠️ MONGO_URI not set. Defaulting to localhost for safety.")
+    # Safe fallback for local testing if env var isn't set
+    print("⚠️ MONGO_URI not set. Defaulting to localhost.")
     MONGO_URI = "mongodb://localhost:27017/CRV360"
 
 print("✅ MONGO_URI loaded")
@@ -20,42 +20,40 @@ print("✅ MONGO_URI loaded")
 # -----------------------------------
 client = MongoClient(
     MONGO_URI,
-    serverSelectionTimeoutMS=20000,
-    connectTimeoutMS=20000,
+    serverSelectionTimeoutMS=30000,
+    connectTimeoutMS=30000,
     retryWrites=True,
 )
 
-db = client["CRV360"]
+db = client.get_default_database("CRV360")
 
 # -----------------------------------
-# COLLECTIONS (SINGLE SOURCE OF TRUTH)
+# COLLECTION EXPORTS (Complete List)
 # -----------------------------------
 
-# Users / Auth
+# 1. Auth & Users
 users_collection = db["users"]
 
-# Assets
+# 2. Assets Module
 assets_collection = db["assets"]
-asset_relationships_collection = db["asset_relationships"]
 asset_ingestion_jobs = db["asset_ingestion_jobs"]
 asset_ingestion_rows = db["asset_ingestion_rows"]
+asset_relationships_collection = db["asset_relationships"]
 
-# Events / Threats
-events_collection = db["events"]
+# 3. Compliance Module
+compliance_frameworks = db["compliance_frameworks"]
+compliance_violations = db["compliance_violations"]
+compliance_actions = db["compliance_actions"]
+evidence_intelligence = db["evidence_intelligence"]
+evidence_gap_reports = db["evidence_gap_reports"]
+
+# 4. Events & Incident Response
 threat_campaigns = db["threat_campaigns"]
 security_alerts = db["security_alerts"]
 incident_responses = db["incident_responses"]
 alert_metrics = db["alert_metrics"]
 
-# Metrics / Ops
-metrics_collection = db["metrics"]
-operational_indicators = db["operational_indicators"]
-daily_trends = db["daily_trends"]
-daily_alerts = db["daily_alerts"]
-module_health = db["module_health"]
-calendar_events = db["calendar_events"]
-
-# Risk
+# 5. Risk Module
 risk_summary_col = db["risk_summary"]
 risk_posture_col = db["risk_posture"]
 risk_category_breakdown_col = db["risk_category_breakdown"]
@@ -65,29 +63,24 @@ risk_external_drivers_col = db["risk_external_drivers"]
 risk_recommendations_col = db["risk_recommendations"]
 top_risks = db["top_risks"]
 
-# Compliance
-compliance_frameworks = db["compliance_frameworks"]
-compliance_violations = db["compliance_violations"]
-compliance_actions = db["compliance_actions"]
-evidence_intelligence = db["evidence_intelligence"]
-evidence_gap_reports = db["evidence_gap_reports"]
+# 6. Phishing Module
+phishing_intelligence = db["phishing_intelligence"]
+phishing_simulations = db["phishing_simulations"]
+phishing_templates = db["phishing_templates"]
 
-# Vulnerabilities
+# 7. Vulnerabilities Module
 vulnerabilities_collection = db["vulnerabilities"]
 vuln_summary_collection = db["vuln_summary"]
 active_threats_collection = db["active_threats"]
 vuln_severity_dist_collection = db["vuln_severity_distribution"]
 patch_velocity_collection = db["patch_velocity"]
 
-# Executive
+# 8. Settings & Metrics (General)
+system_settings_collection = db["system_settings"]  # 👈 This was missing!
+metrics_collection = db["metrics"]
+operational_indicators = db["operational_indicators"]
+daily_trends = db["daily_trends"]
+calendar_events = db["calendar_events"]
+module_health = db["module_health"]
+daily_alerts = db["daily_alerts"]
 executive_reports = db["executive_reports"]
-
-# ✅ ADDED MISSING COLLECTIONS:
-
-# Phishing
-phishing_intelligence = db["phishing_intelligence"]
-phishing_simulations = db["phishing_simulations"]
-phishing_templates = db["phishing_templates"]
-
-# Settings
-system_settings_collection = db["system_settings"]
