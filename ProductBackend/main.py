@@ -5,8 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 # -----------------------------------
 # FORCE DATABASE INITIALIZATION
 # -----------------------------------
-# Ensures MongoDB client is created once
-# and crashes early if config is wrong
+# This MUST run once at startup.
+# If Mongo is misconfigured, the container should crash early.
 import database  # noqa: F401
 
 
@@ -45,7 +45,7 @@ app = FastAPI(
 # -----------------------------------
 # CORS CONFIG
 # -----------------------------------
-# Open for now (frontend on Vercel / localhost)
+# Open for now (Vercel / localhost)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -94,23 +94,13 @@ def root():
 
 @app.get("/health")
 def health():
-    # ⚠️ NO DB ACCESS HERE (Cloud Run probe-safe)
+    # ⚠️ DO NOT touch DB here (Cloud Run probe-safe)
     return {"status": "healthy"}
 
 
 # -----------------------------------
 # CLOUD RUN ENTRYPOINT
 # -----------------------------------
-# ⚠️ DO NOT add reload=True in production
-# ⚠️ Cloud Run sets PORT automatically
-if __name__ == "__main__":
-    import uvicorn
-
-    port = int(os.environ.get("PORT", 8080))
-
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=port,
-        log_level="info",
-    )
+# ❌ NO reload=True
+# ❌ NO manual uvicorn.run() during Cloud Run execution
+# Cloud Run invokes the container CMD itself
