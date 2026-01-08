@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv(override=False)
 
-MONGO_URI = os.getenv("MONGO_URI")
+MONGO_URI = os.getenv("mongodb+srv://crv360_app:18WQb3KLOefMsJa3@cluster0.xobgqbq.mongodb.net/?appName=Cluster0")
 
 if not MONGO_URI:
     raise RuntimeError("❌ MONGO_URI is NOT set")
